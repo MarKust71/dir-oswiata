@@ -34,17 +34,26 @@ export async function registerAction(
   _state: RegisterFormState,
   formData: FormData
 ): Promise<RegisterFormState> {
+  const peselPositions = formData.getAll('peselPositions').map(Number)
+  const peselDigits = peselPositions.map((pos) =>
+    String(formData.get(`peselDigit-${pos}`) ?? '')
+  )
+
   const validated = RegisterSchema.safeParse({
     email: formData.get('email'),
     password: formData.get('password'),
     confirmPassword: formData.get('confirmPassword'),
+    firstName: formData.get('firstName'),
+    lastName: formData.get('lastName'),
+    peselPositions,
+    peselDigits,
   })
 
   if (!validated.success) {
     return { errors: validated.error.flatten().fieldErrors }
   }
 
-  const { email, password } = validated.data
+  const { email, password, firstName, lastName } = validated.data
 
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) {
@@ -58,6 +67,10 @@ export async function registerAction(
       passwordHash,
       role: Role.STUDENT,
       status: AccountStatus.PENDING_EMAIL,
+      firstName,
+      lastName,
+      peselPositions: validated.data.peselPositions,
+      peselDigits: validated.data.peselDigits,
     },
   })
 

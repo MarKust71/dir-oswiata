@@ -31,13 +31,23 @@ export async function sendVerificationEmail(email: string, token: string) {
     return
   }
 
-  await transporter.sendMail({
-    from: SMTP_FROM || SMTP_USER,
-    to: email,
-    subject: 'Potwierdź swój adres e-mail',
-    text: `Kliknij w link, aby potwierdzić adres e-mail: ${verifyUrl}`,
-    html: `<p>Kliknij link, aby potwierdzić adres e-mail:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
-  })
+  try {
+    await transporter.sendMail({
+      from: SMTP_FROM || SMTP_USER,
+      to: email,
+      subject: 'Potwierdź swój adres e-mail',
+      text: `Kliknij w link, aby potwierdzić adres e-mail: ${verifyUrl}`,
+      html: `<p>Kliknij link, aby potwierdzić adres e-mail:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
+    })
+  } catch (error) {
+    // Blad wysylki (np. odrzucony adres odbiorcy) nie moze wywalic calej
+    // rejestracji - konto jest juz zapisane w bazie, uzytkownik moze
+    // poprosic o ponowne wyslanie linku.
+    console.error(
+      `[mailer] Nie udało się wysłać maila weryfikacyjnego do ${email}:`,
+      error
+    )
+  }
 }
 
 export async function sendAccountActivatedEmail(email: string) {
@@ -52,11 +62,20 @@ export async function sendAccountActivatedEmail(email: string) {
     return
   }
 
-  await transporter.sendMail({
-    from: SMTP_FROM || SMTP_USER,
-    to: email,
-    subject: 'Twoje konto zostało aktywowane',
-    text: `Twoje konto jest już aktywne. Możesz się zalogować: ${loginUrl}`,
-    html: `<p>Twoje konto jest już aktywne. Możesz się zalogować:</p><p><a href="${loginUrl}">${loginUrl}</a></p>`,
-  })
+  try {
+    await transporter.sendMail({
+      from: SMTP_FROM || SMTP_USER,
+      to: email,
+      subject: 'Twoje konto zostało aktywowane',
+      text: `Twoje konto jest już aktywne. Możesz się zalogować: ${loginUrl}`,
+      html: `<p>Twoje konto jest już aktywne. Możesz się zalogować:</p><p><a href="${loginUrl}">${loginUrl}</a></p>`,
+    })
+  } catch (error) {
+    // Blad wysylki nie moze zablokowac aktywacji konta przez administratora -
+    // konto jest juz aktywne w bazie niezaleznie od tego, czy mail dotarl.
+    console.error(
+      `[mailer] Nie udało się wysłać maila o aktywacji konta do ${email}:`,
+      error
+    )
+  }
 }

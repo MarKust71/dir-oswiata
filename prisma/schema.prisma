@@ -30,6 +30,12 @@ model User {
   role               Role                @default(STUDENT)
   status             AccountStatus       @default(PENDING_EMAIL)
   emailVerifiedAt    DateTime?
+  firstName          String?
+  lastName           String?
+  // Losowo wskazane pozycje (0-10) numeru PESEL, ktore uzytkownik wpisal przy rejestracji,
+  // oraz odpowiadajace im cyfry - do recznej weryfikacji tozsamosci przez administratora.
+  peselPositions     Int[]               @default([])
+  peselDigits        String[]            @default([])
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   verificationTokens VerificationToken[]
