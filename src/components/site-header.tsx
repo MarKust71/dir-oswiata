@@ -1,19 +1,20 @@
-import Link from "next/link";
-import { getCurrentUser } from "@/lib/dal";
-import { logoutAction } from "@/app/actions/auth";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { roleLabels } from "@/lib/labels";
-import { homePathForRole } from "@/lib/dal";
+import Link from 'next/link'
+
+import { getCurrentUser } from '@/lib/dal'
+import { logoutAction } from '@/app/actions/auth'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { roleLabels } from '@/lib/labels'
+import { homePathForRole } from '@/lib/dal'
 
 export async function SiteHeader() {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser()
 
   return (
     <header className="border-b bg-background">
       <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-4 px-4">
         <Link
-          href={user ? homePathForRole(user.role) : "/"}
+          href={user ? homePathForRole(user.role) : '/'}
           className="font-heading text-base font-semibold"
         >
           Dir Oswiata
@@ -35,15 +36,18 @@ export async function SiteHeader() {
           </div>
         ) : (
           <nav className="flex items-center gap-2">
-            <Link href="/login" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            <Link
+              href="/login"
+              className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+            >
               Zaloguj
             </Link>
-            <Link href="/register" className={buttonVariants({ size: "sm" })}>
+            <Link href="/register" className={buttonVariants({ size: 'sm' })}>
               Zarejestruj
             </Link>
           </nav>
         )}
       </div>
     </header>
-  );
+  )
 }

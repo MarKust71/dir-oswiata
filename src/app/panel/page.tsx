@@ -1,15 +1,15 @@
-import { requireUser } from "@/lib/dal";
-import { roleLabels } from "@/lib/labels";
+import { requireUser } from '@/lib/dal'
+import { roleLabels } from '@/lib/labels'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card'
 
 export default async function PanelPage() {
-  const user = await requireUser();
+  const user = await requireUser()
 
   return (
     <div className="flex flex-1 items-start justify-center px-4 py-8 sm:items-center">
@@ -21,7 +21,9 @@ export default async function PanelPage() {
         <CardContent className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">E-mail</span>
-            <span className="break-all text-right font-medium">{user.email}</span>
+            <span className="break-all text-right font-medium">
+              {user.email}
+            </span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Rola</span>
@@ -30,5 +32,5 @@ export default async function PanelPage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

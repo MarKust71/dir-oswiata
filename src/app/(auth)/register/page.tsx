@@ -4,8 +4,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { RegisterForm } from "./register-form";
+} from '@/components/ui/card'
+
+import { RegisterForm } from './register-form'
 
 export default function RegisterPage() {
   return (
@@ -14,7 +15,8 @@ export default function RegisterPage() {
         <CardHeader>
           <CardTitle className="text-xl">Rejestracja</CardTitle>
           <CardDescription>
-            Nowe konto wymaga potwierdzenia e-mail oraz akceptacji administratora.
+            Nowe konto wymaga potwierdzenia e-mail oraz akceptacji
+            administratora.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -22,5 +24,5 @@ export default function RegisterPage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
