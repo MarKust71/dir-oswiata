@@ -32,13 +32,17 @@ export async function sendVerificationEmail(email: string, token: string) {
   }
 
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: SMTP_FROM || SMTP_USER,
       to: email,
       subject: 'Potwierdź swój adres e-mail',
       text: `Kliknij w link, aby potwierdzić adres e-mail: ${verifyUrl}`,
       html: `<p>Kliknij link, aby potwierdzić adres e-mail:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
     })
+
+    console.log(
+      `[mailer] Wysłano mail weryfikacyjny do ${email} (messageId: ${info.messageId}, response: ${info.response})`
+    )
   } catch (error) {
     // Blad wysylki (np. odrzucony adres odbiorcy) nie moze wywalic calej
     // rejestracji - konto jest juz zapisane w bazie, uzytkownik moze
@@ -63,13 +67,17 @@ export async function sendAccountActivatedEmail(email: string) {
   }
 
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: SMTP_FROM || SMTP_USER,
       to: email,
       subject: 'Twoje konto zostało aktywowane',
       text: `Twoje konto jest już aktywne. Możesz się zalogować: ${loginUrl}`,
       html: `<p>Twoje konto jest już aktywne. Możesz się zalogować:</p><p><a href="${loginUrl}">${loginUrl}</a></p>`,
     })
+
+    console.log(
+      `[mailer] Wysłano mail o aktywacji do ${email} (messageId: ${info.messageId}, response: ${info.response})`
+    )
   } catch (error) {
     // Blad wysylki nie moze zablokowac aktywacji konta przez administratora -
     // konto jest juz aktywne w bazie niezaleznie od tego, czy mail dotarl.
