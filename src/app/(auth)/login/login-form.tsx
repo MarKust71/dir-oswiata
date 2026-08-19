@@ -1,23 +1,24 @@
-"use client";
+'use client'
 
-import { useActionState, useState, useTransition } from "react";
-import Link from "next/link";
-import { loginAction, resendVerificationAction } from "@/app/actions/auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useActionState, useState, useTransition } from 'react'
+import Link from 'next/link'
+
+import { loginAction, resendVerificationAction } from '@/app/actions/auth'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export function LoginForm() {
-  const [state, action, pending] = useActionState(loginAction, undefined);
-  const [resendPending, startResend] = useTransition();
-  const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [state, action, pending] = useActionState(loginAction, undefined)
+  const [resendPending, startResend] = useTransition()
+  const [resendMessage, setResendMessage] = useState<string | null>(null)
 
   function handleResend() {
-    if (!state?.email) return;
+    if (!state?.email) return
     startResend(async () => {
-      const res = await resendVerificationAction(state.email!);
-      setResendMessage(res.message);
-    });
+      const res = await resendVerificationAction(state.email!)
+      setResendMessage(res.message)
+    })
   }
 
   return (
@@ -61,7 +62,9 @@ export function LoginForm() {
               disabled={resendPending}
               className="self-start text-sm font-medium text-primary underline-offset-4 hover:underline"
             >
-              {resendPending ? "Wysylanie..." : "Wyslij ponownie link weryfikacyjny"}
+              {resendPending
+                ? 'Wysylanie...'
+                : 'Wyslij ponownie link weryfikacyjny'}
             </button>
           )}
           {resendMessage && (
@@ -71,15 +74,18 @@ export function LoginForm() {
       )}
 
       <Button type="submit" disabled={pending} className="mt-2 h-10 w-full">
-        {pending ? "Logowanie..." : "Zaloguj sie"}
+        {pending ? 'Logowanie...' : 'Zaloguj sie'}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        Nie masz konta?{" "}
-        <Link href="/register" className="font-medium text-primary underline-offset-4 hover:underline">
+        Nie masz konta?{' '}
+        <Link
+          href="/register"
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
           Zarejestruj sie
         </Link>
       </p>
     </form>
-  );
+  )
 }

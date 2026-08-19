@@ -1,26 +1,30 @@
-"use client";
+'use client'
 
-import { useTransition } from "react";
-import { toast } from "sonner";
-import { setAccountRoleAction, setAccountStatusAction } from "@/app/actions/admin";
-import { Button } from "@/components/ui/button";
+import { useTransition } from 'react'
+import { toast } from 'sonner'
+
+import {
+  setAccountRoleAction,
+  setAccountStatusAction,
+} from '@/app/actions/admin'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { roleLabels } from "@/lib/labels";
-import { AccountStatus, Role } from "@/generated/prisma/enums";
+} from '@/components/ui/select'
+import { roleLabels } from '@/lib/labels'
+import { AccountStatus, Role } from '@/generated/prisma/enums'
 
 type AccountActionsProps = {
-  userId: string;
-  role: Role;
-  status: AccountStatus;
-  canManage: boolean;
-  assignableRoles: Role[];
-};
+  userId: string
+  role: Role
+  status: AccountStatus
+  canManage: boolean
+  assignableRoles: Role[]
+}
 
 export function AccountActions({
   userId,
@@ -29,27 +33,29 @@ export function AccountActions({
   canManage,
   assignableRoles,
 }: AccountActionsProps) {
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition()
 
-  function handleStatus(next: typeof AccountStatus.ACTIVE | typeof AccountStatus.DISABLED) {
+  function handleStatus(
+    next: typeof AccountStatus.ACTIVE | typeof AccountStatus.DISABLED
+  ) {
     startTransition(async () => {
-      const res = await setAccountStatusAction(userId, next);
-      if (res?.error) toast.error(res.error);
-      else if (res?.message) toast.success(res.message);
-    });
+      const res = await setAccountStatusAction(userId, next)
+      if (res?.error) toast.error(res.error)
+      else if (res?.message) toast.success(res.message)
+    })
   }
 
   function handleRole(next: Role | null) {
-    if (!next) return;
+    if (!next) return
     startTransition(async () => {
-      const res = await setAccountRoleAction(userId, next);
-      if (res?.error) toast.error(res.error);
-      else if (res?.message) toast.success(res.message);
-    });
+      const res = await setAccountRoleAction(userId, next)
+      if (res?.error) toast.error(res.error)
+      else if (res?.message) toast.success(res.message)
+    })
   }
 
   if (!canManage) {
-    return <span className="text-sm text-muted-foreground">Brak uprawnien</span>;
+    return <span className="text-sm text-muted-foreground">Brak uprawnien</span>
   }
 
   return (
@@ -87,10 +93,14 @@ export function AccountActions({
         </Button>
       )}
       {status === AccountStatus.DISABLED && (
-        <Button size="sm" disabled={pending} onClick={() => handleStatus(AccountStatus.ACTIVE)}>
+        <Button
+          size="sm"
+          disabled={pending}
+          onClick={() => handleStatus(AccountStatus.ACTIVE)}
+        >
           Aktywuj
         </Button>
       )}
     </div>
-  );
+  )
 }

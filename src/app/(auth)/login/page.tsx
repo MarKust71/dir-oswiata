@@ -4,8 +4,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { LoginForm } from "./login-form";
+} from '@/components/ui/card'
+
+import { LoginForm } from './login-form'
 
 export default function LoginPage() {
   return (
@@ -13,12 +14,14 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-xl">Logowanie</CardTitle>
-          <CardDescription>Zaloguj sie, uzywajac adresu e-mail i hasla.</CardDescription>
+          <CardDescription>
+            Zaloguj sie, uzywajac adresu e-mail i hasla.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <LoginForm />
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

@@ -4,13 +4,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { VerifyEmailButton } from "./verify-email-button";
+} from '@/components/ui/card'
+
+import { VerifyEmailButton } from './verify-email-button'
 
 export default async function VerifyEmailPage(
-  props: PageProps<"/verify-email/[token]">
+  props: PageProps<'/verify-email/[token]'>
 ) {
-  const { token } = await props.params;
+  const { token } = await props.params
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-12">
@@ -26,5 +27,5 @@ export default async function VerifyEmailPage(
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
