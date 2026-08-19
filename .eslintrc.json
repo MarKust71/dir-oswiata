@@ -1,0 +1,21 @@
+{
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "padding-line-between-statements": [
+      "error",
+      { "blankLine": "always", "prev": "*", "next": "return" }
+    ],
+    "react-hooks/exhaustive-deps": "off",
+    "import/order": [
+      "error",
+      {
+        "groups": [
+          ["external", "builtin"],
+          ["parent", "internal"],
+          ["index", "sibling"]
+        ],
+        "newlines-between": "always"
+      }
+    ]
+  }
+}
