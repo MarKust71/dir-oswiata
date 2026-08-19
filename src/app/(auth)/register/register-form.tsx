@@ -122,13 +122,13 @@ export function RegisterForm() {
 
       <div className="flex flex-col gap-1.5">
         <Label>Numer PESEL - wskazane cyfry</Label>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-nowrap gap-0.5 sm:gap-1">
           {Array.from({ length: PESEL_LENGTH }, (_, i) => {
             const isActive = peselPositions.includes(i)
 
             return (
-              <div key={i} className="flex flex-col items-center gap-1">
-                <span className="text-[10px] text-muted-foreground">
+              <div key={i} className="flex flex-col items-center gap-0.5">
+                <span className="text-[9px] text-muted-foreground">
                   {i + 1}
                 </span>
                 {isActive ? (
@@ -142,7 +142,7 @@ export function RegisterForm() {
                       maxLength={1}
                       autoComplete="off"
                       required
-                      className="h-10 w-9 px-0 text-center tabular-nums"
+                      className="h-9 w-6 px-0 text-center tabular-nums"
                       onChange={(e) => {
                         e.target.value = e.target.value
                           .replace(/[^0-9]/g, '')
@@ -153,7 +153,7 @@ export function RegisterForm() {
                 ) : (
                   <div
                     aria-hidden
-                    className="flex h-10 w-9 items-center justify-center rounded-lg border border-input bg-input/30 text-muted-foreground"
+                    className="flex h-9 w-6 items-center justify-center rounded-lg border border-input bg-input/30 text-muted-foreground"
                   >
                     •
                   </div>
