@@ -13,7 +13,11 @@ import {
   type RegisterFormState,
   type LoginFormState,
 } from '@/lib/validation'
-import { sendVerificationEmail } from '@/lib/mailer'
+import {
+  sendPendingApprovalNotification,
+  sendVerificationEmail,
+} from '@/lib/mailer'
+import { getNotificationEmails } from '@/lib/settings'
 import { AccountStatus, Role } from '@/generated/prisma/enums'
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000 // 24h
@@ -154,7 +158,7 @@ export async function verifyEmailAction(token: string) {
     }
   }
 
-  await prisma.$transaction([
+  const [verifiedUser] = await prisma.$transaction([
     prisma.user.update({
       where: { id: record.userId },
       data: {
@@ -164,6 +168,9 @@ export async function verifyEmailAction(token: string) {
     }),
     prisma.verificationToken.delete({ where: { id: record.id } }),
   ])
+
+  const notificationEmails = await getNotificationEmails()
+  await sendPendingApprovalNotification(notificationEmails, verifiedUser.email)
 
   return {
     success: true as const,

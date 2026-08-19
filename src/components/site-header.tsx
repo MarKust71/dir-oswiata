@@ -6,6 +6,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { roleLabels } from '@/lib/labels'
 import { homePathForRole } from '@/lib/dal'
+import { Role } from '@/generated/prisma/enums'
 
 export async function SiteHeader() {
   const user = await getCurrentUser()
@@ -22,6 +23,14 @@ export async function SiteHeader() {
 
         {user ? (
           <div className="flex items-center gap-3">
+            {user.role === Role.ADMIN && (
+              <Link
+                href="/settings"
+                className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+              >
+                Ustawienia
+              </Link>
+            )}
             <Badge variant="secondary" className="hidden sm:inline-flex">
               {roleLabels[user.role]}
             </Badge>

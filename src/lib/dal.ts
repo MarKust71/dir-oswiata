@@ -38,7 +38,11 @@ export const getCurrentUser = cache(async () => {
 
 export async function requireUser() {
   const user = await getCurrentUser()
-  if (!user) redirect('/login')
+  // Przekierowanie przez trasę czyszczącą ciasteczko, a nie bezpośrednio na /login -
+  // jeśli sesja jest technicznie ważnym JWT-em, ale użytkownik zniknął/został
+  // dezaktywowany w bazie, proxy.ts (który sprawdza tylko JWT, bez bazy) odbiłby
+  // z powrotem na /dashboard, tworząc pętlę przekierowań.
+  if (!user) redirect('/api/auth/clear-session')
 
   return user
 }
