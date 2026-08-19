@@ -15,8 +15,8 @@ export default function RegisterPage() {
         <CardHeader>
           <CardTitle className="text-xl">Rejestracja</CardTitle>
           <CardDescription>
-            Nowe konto wymaga potwierdzenia e-mail oraz akceptacji
-            administratora.
+            Uzyskanie dostępu do wyników wymaga założenia konta, potwierdzenia
+            adresu e-mail oraz akceptacji administratora.
           </CardDescription>
         </CardHeader>
         <CardContent>
