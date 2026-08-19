@@ -39,3 +39,24 @@ export async function sendVerificationEmail(email: string, token: string) {
     html: `<p>Kliknij link, aby potwierdzić adres e-mail:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
   })
 }
+
+export async function sendAccountActivatedEmail(email: string) {
+  const loginUrl = `${APP_URL ?? 'http://localhost:3000'}/login`
+  const transporter = getTransporter()
+
+  if (!transporter) {
+    console.warn(
+      `[mailer] SMTP nie jest skonfigurowany. Konto ${email} zostało aktywowane.`
+    )
+
+    return
+  }
+
+  await transporter.sendMail({
+    from: SMTP_FROM || SMTP_USER,
+    to: email,
+    subject: 'Twoje konto zostało aktywowane',
+    text: `Twoje konto jest już aktywne. Możesz się zalogować: ${loginUrl}`,
+    html: `<p>Twoje konto jest już aktywne. Możesz się zalogować:</p><p><a href="${loginUrl}">${loginUrl}</a></p>`,
+  })
+}
