@@ -54,6 +54,51 @@ export async function sendVerificationEmail(email: string, token: string) {
   }
 }
 
+const notificationTimestampFormatter = new Intl.DateTimeFormat('pl-PL', {
+  dateStyle: 'short',
+  timeStyle: 'short',
+})
+
+export async function sendPendingApprovalNotification(
+  adminEmails: string[],
+  userEmail: string
+) {
+  if (adminEmails.length === 0) return
+
+  const text = `${notificationTimestampFormatter.format(new Date())} - użytkownik ${userEmail} oczekuje na akceptację`
+  const transporter = getTransporter()
+
+  if (!transporter) {
+    console.warn(
+      `[mailer] SMTP nie jest skonfigurowany. Powiadomienie: ${text}`
+    )
+
+    return
+  }
+
+  await Promise.all(
+    adminEmails.map(async (to) => {
+      try {
+        const info = await transporter.sendMail({
+          from: SMTP_FROM || SMTP_USER,
+          to,
+          subject: 'Nowe konto oczekuje na akceptację',
+          text,
+        })
+
+        console.log(
+          `[mailer] Wysłano powiadomienie o oczekującym koncie do ${to} (messageId: ${info.messageId}, response: ${info.response})`
+        )
+      } catch (error) {
+        console.error(
+          `[mailer] Nie udało się wysłać powiadomienia o oczekującym koncie do ${to}:`,
+          error
+        )
+      }
+    })
+  )
+}
+
 export async function sendAccountActivatedEmail(email: string) {
   const loginUrl = `${APP_URL ?? 'http://localhost:3000'}/login`
   const transporter = getTransporter()

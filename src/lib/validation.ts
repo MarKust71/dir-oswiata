@@ -77,6 +77,11 @@ export type RegisterFormState =
     }
   | undefined
 
+export const NotificationEmailSchema = z
+  .email({ error: 'Nieprawidłowy adres e-mail.' })
+  .trim()
+  .toLowerCase()
+
 export const LoginSchema = z.object({
   email: z
     .email({ error: 'Podaj prawidłowy adres e-mail.' })
