@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
 import { canManageAccount, canAssignRole } from '@/lib/permissions'
+import { sendAccountActivatedEmail } from '@/lib/mailer'
 import { AccountStatus, Role } from '@/generated/prisma/enums'
 
 export type AdminActionState = { message?: string; error?: string } | undefined
@@ -50,6 +51,10 @@ export async function setAccountStatusAction(
     where: { id: target.id },
     data: { status: nextStatus },
   })
+
+  if (nextStatus === AccountStatus.ACTIVE) {
+    await sendAccountActivatedEmail(target.email)
+  }
 
   revalidatePath('/dashboard')
 

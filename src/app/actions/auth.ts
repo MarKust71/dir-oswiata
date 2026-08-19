@@ -153,7 +153,7 @@ export async function verifyEmailAction(token: string) {
   return {
     success: true as const,
     message:
-      'Adres e-mail został potwierdzony. Konto oczekuje teraz na akceptację administratora.',
+      'Adres e-mail został potwierdzony. Konto oczekuje teraz na akceptację administratora. O aktywacji konta poinformujemy Cię osobnym e-mailem.',
   }
 }
 
