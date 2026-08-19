@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
 import { canManageAccount } from '@/lib/permissions'
 import { roleLabels, statusLabels } from '@/lib/labels'
+import { maskPesel } from '@/lib/pesel'
 import { AccountStatus, Role } from '@/generated/prisma/enums'
 import {
   Card,
@@ -43,6 +44,30 @@ const dateFormatter = new Intl.DateTimeFormat('pl-PL', {
   dateStyle: 'medium',
 })
 
+function fullName(user: { firstName: string | null; lastName: string | null }) {
+  const name = [user.firstName, user.lastName].filter(Boolean).join(' ')
+
+  return name || '—'
+}
+
+function PeselMask({
+  positions,
+  digits,
+}: {
+  positions: number[]
+  digits: string[]
+}) {
+  if (positions.length === 0) {
+    return <span className="text-muted-foreground">—</span>
+  }
+
+  return (
+    <span className="font-mono text-sm whitespace-nowrap">
+      {maskPesel(positions, digits).join(' ')}
+    </span>
+  )
+}
+
 export default async function DashboardPage() {
   const actor = await requireRole([Role.ADMIN, Role.USER])
 
@@ -53,6 +78,10 @@ export default async function DashboardPage() {
       role: true,
       status: true,
       createdAt: true,
+      firstName: true,
+      lastName: true,
+      peselPositions: true,
+      peselDigits: true,
     },
     orderBy: { createdAt: 'desc' },
   })
@@ -86,10 +115,12 @@ export default async function DashboardPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>E-mail</TableHead>
+                <TableHead>Imię i nazwisko</TableHead>
+                <TableHead>PESEL</TableHead>
                 <TableHead>Rola</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Data rejestracji</TableHead>
-                <TableHead className="text-right">Akcje</TableHead>
+                <TableHead>Rejestracja</TableHead>
+                <TableHead>Akcje</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -100,6 +131,13 @@ export default async function DashboardPage() {
                 return (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.email}</TableCell>
+                    <TableCell>{fullName(user)}</TableCell>
+                    <TableCell>
+                      <PeselMask
+                        positions={user.peselPositions}
+                        digits={user.peselDigits}
+                      />
+                    </TableCell>
                     <TableCell>{roleLabels[user.role]}</TableCell>
                     <TableCell>
                       <Badge variant={STATUS_BADGE_VARIANT[user.status]}>
@@ -109,16 +147,15 @@ export default async function DashboardPage() {
                     <TableCell>
                       {dateFormatter.format(user.createdAt)}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end">
-                        <AccountActions
-                          userId={user.id}
-                          role={user.role}
-                          status={user.status}
-                          canManage={canManage}
-                          assignableRoles={assignableRoles}
-                        />
-                      </div>
+                    <TableCell>
+                      <AccountActions
+                        userId={user.id}
+                        role={user.role}
+                        status={user.status}
+                        canManage={canManage}
+                        assignableRoles={assignableRoles}
+                        layout="compact"
+                      />
                     </TableCell>
                   </TableRow>
                 )
@@ -152,6 +189,23 @@ export default async function DashboardPage() {
                 >
                   {statusLabels[user.status]}
                 </Badge>
+                <div className="flex flex-col gap-1 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">
+                      Imię i nazwisko
+                    </span>
+                    <span className="text-right font-medium">
+                      {fullName(user)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">PESEL</span>
+                    <PeselMask
+                      positions={user.peselPositions}
+                      digits={user.peselDigits}
+                    />
+                  </div>
+                </div>
                 <AccountActions
                   userId={user.id}
                   role={user.role}

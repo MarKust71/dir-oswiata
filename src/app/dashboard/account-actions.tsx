@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 import { roleLabels } from '@/lib/labels'
 import { AccountStatus, Role } from '@/generated/prisma/enums'
 
@@ -24,6 +25,10 @@ type AccountActionsProps = {
   status: AccountStatus
   canManage: boolean
   assignableRoles: Role[]
+  // "compact" ustawia kontrolki jedna pod druga, zeby nie poszerzac kolumny
+  // w tabeli desktopowej; "wide" (domyslnie) uklada je obok siebie - uzywane
+  // w szerszych kartach mobilnych.
+  layout?: 'compact' | 'wide'
 }
 
 export function AccountActions({
@@ -32,6 +37,7 @@ export function AccountActions({
   status,
   canManage,
   assignableRoles,
+  layout = 'wide',
 }: AccountActionsProps) {
   const [pending, startTransition] = useTransition()
 
@@ -59,9 +65,17 @@ export function AccountActions({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div
+      className={cn(
+        'flex items-center gap-2',
+        layout === 'compact' ? 'flex-col items-start' : 'flex-wrap'
+      )}
+    >
       <Select value={role} onValueChange={handleRole} disabled={pending}>
-        <SelectTrigger size="sm" className="w-32">
+        <SelectTrigger
+          size="sm"
+          className={layout === 'compact' ? 'w-28' : 'w-32'}
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
