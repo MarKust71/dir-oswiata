@@ -39,7 +39,7 @@ export function LoginForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="password">Haslo</Label>
+        <Label htmlFor="password">Hasło</Label>
         <Input
           id="password"
           name="password"
@@ -63,8 +63,8 @@ export function LoginForm() {
               className="self-start text-sm font-medium text-primary underline-offset-4 hover:underline"
             >
               {resendPending
-                ? 'Wysylanie...'
-                : 'Wyslij ponownie link weryfikacyjny'}
+                ? 'Wysyłanie...'
+                : 'Wyślij ponownie link weryfikacyjny'}
             </button>
           )}
           {resendMessage && (
@@ -74,7 +74,7 @@ export function LoginForm() {
       )}
 
       <Button type="submit" disabled={pending} className="mt-2 h-10 w-full">
-        {pending ? 'Logowanie...' : 'Zaloguj sie'}
+        {pending ? 'Logowanie...' : 'Zaloguj się'}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
@@ -83,7 +83,7 @@ export function LoginForm() {
           href="/register"
           className="font-medium text-primary underline-offset-4 hover:underline"
         >
-          Zarejestruj sie
+          Zarejestruj się
         </Link>
       </p>
     </form>

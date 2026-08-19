@@ -3,22 +3,22 @@ import * as z from 'zod'
 export const RegisterSchema = z
   .object({
     email: z
-      .email({ error: 'Podaj prawidlowy adres e-mail.' })
+      .email({ error: 'Podaj prawidłowy adres e-mail.' })
       .trim()
       .toLowerCase(),
     password: z
       .string()
-      .min(8, { error: 'Haslo musi miec co najmniej 8 znakow.' })
+      .min(8, { error: 'Hasło musi mieć co najmniej 8 znaków.' })
       .regex(/[a-zA-Z]/, {
-        error: 'Haslo musi zawierac co najmniej jedna litere.',
+        error: 'Hasło musi zawierać co najmniej jedną literę.',
       })
       .regex(/[0-9]/, {
-        error: 'Haslo musi zawierac co najmniej jedna cyfre.',
+        error: 'Hasło musi zawierać co najmniej jedną cyfrę.',
       }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    error: 'Hasla nie sa identyczne.',
+    error: 'Hasła nie są identyczne.',
     path: ['confirmPassword'],
   })
 
@@ -36,10 +36,10 @@ export type RegisterFormState =
 
 export const LoginSchema = z.object({
   email: z
-    .email({ error: 'Podaj prawidlowy adres e-mail.' })
+    .email({ error: 'Podaj prawidłowy adres e-mail.' })
     .trim()
     .toLowerCase(),
-  password: z.string().min(1, { error: 'Podaj haslo.' }),
+  password: z.string().min(1, { error: 'Podaj hasło.' }),
 })
 
 export type LoginFormState =

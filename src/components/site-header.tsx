@@ -17,7 +17,7 @@ export async function SiteHeader() {
           href={user ? homePathForRole(user.role) : '/'}
           className="font-heading text-base font-semibold"
         >
-          Dir Oswiata
+          DIR Oświata
         </Link>
 
         {user ? (

@@ -19,7 +19,7 @@ export function RegisterForm() {
           href="/login"
           className="font-medium text-primary underline-offset-4 hover:underline"
         >
-          Wroc do logowania
+          Wróć do logowania
         </Link>
       </div>
     )
@@ -43,7 +43,7 @@ export function RegisterForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="password">Haslo</Label>
+        <Label htmlFor="password">Hasło</Label>
         <Input
           id="password"
           name="password"
@@ -81,7 +81,7 @@ export function RegisterForm() {
       )}
 
       <Button type="submit" disabled={pending} className="mt-2 h-10 w-full">
-        {pending ? 'Tworzenie konta...' : 'Zarejestruj sie'}
+        {pending ? 'Tworzenie konta...' : 'Zarejestruj się'}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
@@ -90,7 +90,7 @@ export function RegisterForm() {
           href="/login"
           className="font-medium text-primary underline-offset-4 hover:underline"
         >
-          Zaloguj sie
+          Zaloguj się
         </Link>
       </p>
     </form>

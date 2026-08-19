@@ -26,7 +26,7 @@ export async function setAccountStatusAction(
   if (!target) return { error: 'Nie znaleziono konta.' }
 
   if (!canManageAccount(actor, target)) {
-    return { error: 'Brak uprawnien do zarzadzania tym kontem.' }
+    return { error: 'Brak uprawnień do zarządzania tym kontem.' }
   }
 
   if (
@@ -34,16 +34,16 @@ export async function setAccountStatusAction(
     target.status !== AccountStatus.PENDING_APPROVAL &&
     target.status !== AccountStatus.DISABLED
   ) {
-    return { error: 'Tego konta nie mozna teraz aktywowac.' }
+    return { error: 'Tego konta nie można teraz aktywować.' }
   }
   if (
     nextStatus === AccountStatus.DISABLED &&
     target.status !== AccountStatus.ACTIVE
   ) {
-    return { error: 'Mozna dezaktywowac tylko aktywne konta.' }
+    return { error: 'Można dezaktywować tylko aktywne konta.' }
   }
   if (target.id === actor.id) {
-    return { error: 'Nie mozesz zmienic statusu wlasnego konta.' }
+    return { error: 'Nie możesz zmienić statusu własnego konta.' }
   }
 
   await prisma.user.update({
@@ -53,7 +53,7 @@ export async function setAccountStatusAction(
 
   revalidatePath('/dashboard')
 
-  return { message: 'Zapisano zmiane statusu konta.' }
+  return { message: 'Zapisano zmianę statusu konta.' }
 }
 
 export async function setAccountRoleAction(
@@ -66,13 +66,13 @@ export async function setAccountRoleAction(
   if (!target) return { error: 'Nie znaleziono konta.' }
 
   if (target.id === actor.id) {
-    return { error: 'Nie mozesz zmienic wlasnej roli.' }
+    return { error: 'Nie możesz zmienić własnej roli.' }
   }
   if (!canManageAccount(actor, target)) {
-    return { error: 'Brak uprawnien do zarzadzania tym kontem.' }
+    return { error: 'Brak uprawnień do zarządzania tym kontem.' }
   }
   if (!canAssignRole(actor, nextRole)) {
-    return { error: 'Brak uprawnien do nadania tej roli.' }
+    return { error: 'Brak uprawnień do nadania tej roli.' }
   }
 
   await prisma.user.update({
@@ -82,5 +82,5 @@ export async function setAccountRoleAction(
 
   revalidatePath('/dashboard')
 
-  return { message: 'Zapisano zmiane roli.' }
+  return { message: 'Zapisano zmianę roli.' }
 }

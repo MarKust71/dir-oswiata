@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'DIR Oświata',
-  description: 'System kont użytkownikow DIR Oświata',
+  description: 'System kont użytkowników DIR Oświata',
 }
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {

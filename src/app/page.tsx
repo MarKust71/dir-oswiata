@@ -9,11 +9,11 @@ export default async function Home() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-24 text-center">
       <h1 className="max-w-md font-heading text-3xl font-semibold tracking-tight">
-        System kont Dir Oswiata
+        System kont DIR Oświata
       </h1>
       <p className="max-w-md text-muted-foreground">
-        Rejestracja, logowanie i zarzadzanie dostepem dla administratorow,
-        pracownikow i uczniow.
+        Rejestracja, logowanie i zarządzanie dostępem dla administratorów,
+        pracowników i uczniów.
       </p>
 
       {user ? (
@@ -21,7 +21,7 @@ export default async function Home() {
           href={homePathForRole(user.role)}
           className={buttonVariants({ size: 'lg' })}
         >
-          Przejdz do panelu
+          Przejdź do panelu
         </Link>
       ) : (
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -29,10 +29,10 @@ export default async function Home() {
             href="/login"
             className={buttonVariants({ variant: 'outline', size: 'lg' })}
           >
-            Zaloguj sie
+            Zaloguj się
           </Link>
           <Link href="/register" className={buttonVariants({ size: 'lg' })}>
-            Zarejestruj sie
+            Zarejestruj się
           </Link>
         </div>
       )}

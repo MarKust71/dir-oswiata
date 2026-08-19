@@ -36,7 +36,7 @@ export function VerifyEmailButton({ token }: { token: string }) {
           href="/login"
           className="font-medium text-primary underline-offset-4 hover:underline"
         >
-          Wroc do logowania
+          Wróć do logowania
         </Link>
       </div>
     )
@@ -44,7 +44,7 @@ export function VerifyEmailButton({ token }: { token: string }) {
 
   return (
     <Button onClick={handleClick} disabled={pending} className="h-10 w-full">
-      {pending ? 'Potwierdzanie...' : 'Potwierdz adres e-mail'}
+      {pending ? 'Potwierdzanie...' : 'Potwierdź adres e-mail'}
     </Button>
   )
 }

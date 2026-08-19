@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 
-// Tylko optymistyczne przekierowania na podstawie ciasteczka sesji (bez zapytan do bazy).
-// Realna kontrola statusu konta i roli odbywa sie w src/lib/dal.ts przy kazdym zadaniu.
+// Tylko optymistyczne przekierowania na podstawie ciasteczka sesji (bez zapytań do bazy).
+// Realna kontrola statusu konta i roli odbywa się w src/lib/dal.ts przy każdym zadaniu.
 
 const PROTECTED_PREFIXES = ['/dashboard', '/panel']
 const AUTH_PAGES = ['/login', '/register']

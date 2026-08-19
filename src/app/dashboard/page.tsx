@@ -70,12 +70,12 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="font-heading text-2xl font-semibold">
-          Zarzadzanie kontami
+          Zarządzanie kontami
         </h1>
         <p className="text-sm text-muted-foreground">
-          Zatwierdzaj nowe konta i zarzadzaj rolami uzytkownikow.
+          Zatwierdzaj nowe konta i zarządzaj rolami użytkowników.
           {actor.role === Role.USER &&
-            ' Konta z rola Administrator sa widoczne, ale poza Twoimi uprawnieniami.'}
+            ' Konta z rolą Administrator są widoczne, ale poza Twoimi uprawnieniami.'}
         </p>
       </div>
 
