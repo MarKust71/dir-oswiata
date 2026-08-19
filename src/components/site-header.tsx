@@ -48,6 +48,22 @@ export async function SiteHeader() {
           </nav>
         )}
       </div>
+
+      <div className="border-t px-4 py-1.5 text-center text-xs text-muted-foreground">
+        <a
+          href="mailto:oswiata@izba.wroc.pl"
+          className="hover:text-foreground hover:underline"
+        >
+          oswiata@izba.wroc.pl
+        </a>
+        {' | '}
+        <a
+          href="tel:+48713448691"
+          className="hover:text-foreground hover:underline"
+        >
+          tel. +48 71 3448691
+        </a>
+      </div>
     </header>
   )
 }
