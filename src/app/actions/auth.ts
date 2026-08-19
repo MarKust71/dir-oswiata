@@ -66,7 +66,7 @@ export async function registerAction(
   return {
     success: true,
     message:
-      'Konto zostalo utworzone. Sprawdz swoja skrzynke e-mail i potwierdz adres, aby przejsc do akceptacji administratora.',
+      'Konto zostało utworzone. Sprawdź swoją skrzynkę e-mail i potwierdź adres, aby przejść do akceptacji administratora.',
   }
 }
 
@@ -87,24 +87,24 @@ export async function loginAction(
 
   const user = await prisma.user.findUnique({ where: { email } })
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    return { message: 'Nieprawidlowy e-mail lub haslo.' }
+    return { message: 'Nieprawidłowy e-mail lub hasło.' }
   }
 
   if (user.status === AccountStatus.PENDING_EMAIL) {
     return {
       message:
-        'Potwierdz najpierw swoj adres e-mail - sprawdz skrzynke pocztowa.',
+        'Potwierdź najpierw swój adres e-mail - sprawdź skrzynkę pocztową.',
       canResend: true,
       email: user.email,
     }
   }
   if (user.status === AccountStatus.PENDING_APPROVAL) {
-    return { message: 'Konto oczekuje na akceptacje administratora.' }
+    return { message: 'Konto oczekuje na akceptację administratora.' }
   }
   if (user.status === AccountStatus.DISABLED) {
     return {
       message:
-        'To konto zostalo dezaktywowane. Skontaktuj sie z administratorem.',
+        'To konto zostało dezaktywowane. Skontaktuj się z administratorem.',
     }
   }
 
@@ -125,7 +125,7 @@ export async function verifyEmailAction(token: string) {
   if (!record) {
     return {
       success: false as const,
-      message: 'Link weryfikacyjny jest nieprawidlowy lub zostal juz uzyty.',
+      message: 'Link weryfikacyjny jest nieprawidłowy lub został już użyty.',
     }
   }
 
@@ -135,7 +135,7 @@ export async function verifyEmailAction(token: string) {
     return {
       success: false as const,
       message:
-        'Link weryfikacyjny wygasl. Zarejestruj sie ponownie lub popros o nowy link.',
+        'Link weryfikacyjny wygasł. Zarejestruj się ponownie lub poproś o nowy link.',
     }
   }
 
@@ -153,7 +153,7 @@ export async function verifyEmailAction(token: string) {
   return {
     success: true as const,
     message:
-      'Adres e-mail zostal potwierdzony. Konto oczekuje teraz na akceptacje administratora.',
+      'Adres e-mail został potwierdzony. Konto oczekuje teraz na akceptację administratora.',
   }
 }
 
@@ -168,10 +168,10 @@ export async function resendVerificationAction(email: string) {
     await issueVerificationToken(user.id, user.email)
   }
 
-  // Zawsze ten sam komunikat, niezaleznie od tego czy konto istnieje - zeby nie ujawniac,
-  // ktore adresy e-mail sa zarejestrowane.
+  // Zawsze ten sam komunikat, niezależnie od tego czy konto istnieje - żeby nie ujawniać,
+  // które adresy e-mail są zarejestrowane.
   return {
     message:
-      'Jesli konto oczekuje na potwierdzenie e-mail, wyslalismy nowy link.',
+      'Jeśli konto oczekuje na potwierdzenie e-mail, wysłaliśmy nowy link.',
   }
 }

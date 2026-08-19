@@ -15,7 +15,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle className="text-xl">Logowanie</CardTitle>
           <CardDescription>
-            Zaloguj sie, uzywajac adresu e-mail i hasla.
+            Zaloguj się, używając adresu e-mail i hasła.
           </CardDescription>
         </CardHeader>
         <CardContent>

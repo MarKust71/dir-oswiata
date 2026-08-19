@@ -19,7 +19,7 @@ export default async function VerifyEmailPage(
         <CardHeader>
           <CardTitle className="text-xl">Potwierdzenie e-mail</CardTitle>
           <CardDescription>
-            Kliknij przycisk ponizej, aby potwierdzic swoj adres e-mail.
+            Kliknij przycisk poniżej, aby potwierdzić swój adres e-mail.
           </CardDescription>
         </CardHeader>
         <CardContent>
