@@ -3,7 +3,7 @@ import { Role, AccountStatus } from '@/generated/prisma/enums'
 export const roleLabels: Record<Role, string> = {
   [Role.ADMIN]: 'Administrator',
   [Role.USER]: 'Pracownik',
-  [Role.STUDENT]: 'Uczeń',
+  [Role.STUDENT]: 'Student',
 }
 
 export const statusLabels: Record<AccountStatus, string> = {

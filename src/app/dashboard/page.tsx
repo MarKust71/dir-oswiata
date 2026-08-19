@@ -62,7 +62,7 @@ function PeselMask({
   }
 
   return (
-    <span className="font-mono text-sm tracking-widest">
+    <span className="font-mono text-sm whitespace-nowrap">
       {maskPesel(positions, digits).join(' ')}
     </span>
   )
@@ -116,11 +116,11 @@ export default async function DashboardPage() {
               <TableRow>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Imię i nazwisko</TableHead>
-                <TableHead>PESEL (wskazane cyfry)</TableHead>
+                <TableHead>PESEL</TableHead>
                 <TableHead>Rola</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Data rejestracji</TableHead>
-                <TableHead className="text-right">Akcje</TableHead>
+                <TableHead>Rejestracja</TableHead>
+                <TableHead>Akcje</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -147,16 +147,15 @@ export default async function DashboardPage() {
                     <TableCell>
                       {dateFormatter.format(user.createdAt)}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end">
-                        <AccountActions
-                          userId={user.id}
-                          role={user.role}
-                          status={user.status}
-                          canManage={canManage}
-                          assignableRoles={assignableRoles}
-                        />
-                      </div>
+                    <TableCell>
+                      <AccountActions
+                        userId={user.id}
+                        role={user.role}
+                        status={user.status}
+                        canManage={canManage}
+                        assignableRoles={assignableRoles}
+                        layout="compact"
+                      />
                     </TableCell>
                   </TableRow>
                 )

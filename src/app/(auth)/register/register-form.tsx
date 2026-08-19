@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 import { registerAction } from '@/app/actions/auth'
@@ -14,6 +14,7 @@ export function RegisterForm() {
   // Losowane wyłącznie po stronie klienta - inicjalny stan musi być identyczny
   // na serwerze i kliencie, żeby uniknąć błędu hydracji.
   const [peselPositions, setPeselPositions] = useState<number[]>([])
+  const peselInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
 
   useEffect(() => {
     // Celowo: to jedyny sposob na wylosowanie pozycji po stronie klienta bez
@@ -135,6 +136,9 @@ export function RegisterForm() {
                   <>
                     <input type="hidden" name="peselPositions" value={i} />
                     <Input
+                      ref={(el) => {
+                        peselInputRefs.current[i] = el
+                      }}
                       name={`peselDigit-${i}`}
                       type="text"
                       inputMode="numeric"
@@ -144,9 +148,19 @@ export function RegisterForm() {
                       required
                       className="h-9 w-6 px-0 text-center tabular-nums"
                       onChange={(e) => {
-                        e.target.value = e.target.value
+                        const value = e.target.value
                           .replace(/[^0-9]/g, '')
                           .slice(0, 1)
+                        e.target.value = value
+
+                        if (value) {
+                          const currentIndex = peselPositions.indexOf(i)
+                          const nextPosition =
+                            peselPositions[
+                              (currentIndex + 1) % peselPositions.length
+                            ]
+                          peselInputRefs.current[nextPosition]?.select()
+                        }
                       }}
                     />
                   </>

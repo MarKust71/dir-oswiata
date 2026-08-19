@@ -9,6 +9,6 @@ export default async function DashboardLayout({
   await requireRole([Role.ADMIN, Role.USER])
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</div>
+    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</div>
   )
 }
