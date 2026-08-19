@@ -48,6 +48,13 @@ export const RegisterSchema = z
       .length(PESEL_REVEAL_COUNT, {
         error: 'Wprowadź wskazane cyfry numeru PESEL.',
       }),
+    phone: z
+      .string()
+      .trim()
+      .regex(/^\+?[0-9]{0,11}$/, {
+        error:
+          'Numer telefonu może zawierać tylko cyfry, z opcjonalnym "+" na początku (maks. 11 cyfr).',
+      }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     error: 'Hasła nie są identyczne.',
@@ -63,6 +70,7 @@ export type RegisterFormState =
         firstName?: string[]
         lastName?: string[]
         peselDigits?: string[]
+        phone?: string[]
       }
       message?: string
       success?: boolean

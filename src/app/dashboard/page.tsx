@@ -50,6 +50,21 @@ function fullName(user: { firstName: string | null; lastName: string | null }) {
   return name || '—'
 }
 
+function NameWithPhone(user: {
+  firstName: string | null
+  lastName: string | null
+  phone: string | null
+}) {
+  return (
+    <div className="flex flex-col">
+      <span>{fullName(user)}</span>
+      {user.phone && (
+        <span className="text-xs text-muted-foreground">{user.phone}</span>
+      )}
+    </div>
+  )
+}
+
 function PeselMask({
   positions,
   digits,
@@ -80,6 +95,7 @@ export default async function DashboardPage() {
       createdAt: true,
       firstName: true,
       lastName: true,
+      phone: true,
       peselPositions: true,
       peselDigits: true,
     },
@@ -131,7 +147,9 @@ export default async function DashboardPage() {
                 return (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.email}</TableCell>
-                    <TableCell>{fullName(user)}</TableCell>
+                    <TableCell>
+                      <NameWithPhone {...user} />
+                    </TableCell>
                     <TableCell>
                       <PeselMask
                         positions={user.peselPositions}
@@ -196,6 +214,11 @@ export default async function DashboardPage() {
                     </span>
                     <span className="text-right font-medium">
                       {fullName(user)}
+                      {user.phone && (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {user.phone}
+                        </span>
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4">

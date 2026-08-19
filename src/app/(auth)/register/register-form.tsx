@@ -9,6 +9,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PESEL_LENGTH, pickRandomPeselPositions } from '@/lib/pesel'
 
+function RequiredMark() {
+  return (
+    <span aria-hidden className="text-destructive">
+      {' '}
+      *
+    </span>
+  )
+}
+
 export function RegisterForm() {
   const [state, action, pending] = useActionState(registerAction, undefined)
   // Losowane wyłącznie po stronie klienta - inicjalny stan musi być identyczny
@@ -40,7 +49,10 @@ export function RegisterForm() {
   return (
     <form action={action} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="email">Adres e-mail</Label>
+        <Label htmlFor="email">
+          Adres e-mail
+          <RequiredMark />
+        </Label>
         <Input
           id="email"
           name="email"
@@ -55,7 +67,10 @@ export function RegisterForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="password">Hasło</Label>
+        <Label htmlFor="password">
+          Hasło
+          <RequiredMark />
+        </Label>
         <Input
           id="password"
           name="password"
@@ -73,7 +88,10 @@ export function RegisterForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="confirmPassword">Powtorz haslo</Label>
+        <Label htmlFor="confirmPassword">
+          Powtorz haslo
+          <RequiredMark />
+        </Label>
         <Input
           id="confirmPassword"
           name="confirmPassword"
@@ -94,7 +112,10 @@ export function RegisterForm() {
       </p>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="firstName">Imię</Label>
+        <Label htmlFor="firstName">
+          Imię
+          <RequiredMark />
+        </Label>
         <Input
           id="firstName"
           name="firstName"
@@ -109,7 +130,10 @@ export function RegisterForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="lastName">Nazwisko</Label>
+        <Label htmlFor="lastName">
+          Nazwisko
+          <RequiredMark />
+        </Label>
         <Input
           id="lastName"
           name="lastName"
@@ -122,7 +146,10 @@ export function RegisterForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label>Numer PESEL - wskazane cyfry</Label>
+        <Label>
+          Numer PESEL - wskazane cyfry
+          <RequiredMark />
+        </Label>
         <div className="flex flex-nowrap gap-0.5 sm:gap-1">
           {Array.from({ length: PESEL_LENGTH }, (_, i) => {
             const isActive = peselPositions.includes(i)
@@ -183,9 +210,38 @@ export function RegisterForm() {
         )}
       </div>
 
+      <div className="flex flex-col gap-1.5">
+        <p className="text-sm text-muted-foreground">
+          Jeśli chcesz, żebyśmy w przypadku wątpliwości szybciej się z Tobą
+          skontaktowali, zostaw numer telefonu.
+        </p>
+        <Label htmlFor="phone">Telefon</Label>
+        <Input
+          id="phone"
+          name="phone"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          placeholder="+48123456789"
+          onChange={(e) => {
+            const raw = e.target.value
+            const hasPlus = raw.startsWith('+')
+            const digits = raw.replace(/[^0-9]/g, '').slice(0, 11)
+            e.target.value = (hasPlus ? '+' : '') + digits
+          }}
+        />
+        {state?.errors?.phone && (
+          <p className="text-sm text-destructive">{state.errors.phone[0]}</p>
+        )}
+      </div>
+
       {state?.message && (
         <p className="text-sm text-destructive">{state.message}</p>
       )}
+
+      <p className="text-xs text-muted-foreground">
+        * - pole musi zostać wypełnione
+      </p>
 
       <Button type="submit" disabled={pending} className="mt-2 h-10 w-full">
         {pending ? 'Tworzenie konta...' : 'Zarejestruj się'}

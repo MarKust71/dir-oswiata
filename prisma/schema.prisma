@@ -32,6 +32,7 @@ model User {
   emailVerifiedAt    DateTime?
   firstName          String?
   lastName           String?
+  phone              String?
   // Losowo wskazane pozycje (0-10) numeru PESEL, ktore uzytkownik wpisal przy rejestracji,
   // oraz odpowiadajace im cyfry - do recznej weryfikacji tozsamosci przez administratora.
   peselPositions     Int[]               @default([])

@@ -47,13 +47,14 @@ export async function registerAction(
     lastName: formData.get('lastName'),
     peselPositions,
     peselDigits,
+    phone: formData.get('phone'),
   })
 
   if (!validated.success) {
     return { errors: validated.error.flatten().fieldErrors }
   }
 
-  const { email, password, firstName, lastName } = validated.data
+  const { email, password, firstName, lastName, phone } = validated.data
 
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) {
@@ -69,6 +70,7 @@ export async function registerAction(
       status: AccountStatus.PENDING_EMAIL,
       firstName,
       lastName,
+      phone: phone || null,
       peselPositions: validated.data.peselPositions,
       peselDigits: validated.data.peselDigits,
     },
