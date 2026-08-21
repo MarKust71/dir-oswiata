@@ -43,6 +43,17 @@ export async function registerAction(
     String(formData.get(`peselDigit-${pos}`) ?? '')
   )
 
+  // Surowe wartosci z formularza, do odeslania z powrotem po nieudanej probie -
+  // pozwalaja przywrocic wypelnione pola (poza boxami PESEL).
+  const values = {
+    email: String(formData.get('email') ?? ''),
+    password: String(formData.get('password') ?? ''),
+    confirmPassword: String(formData.get('confirmPassword') ?? ''),
+    firstName: String(formData.get('firstName') ?? ''),
+    lastName: String(formData.get('lastName') ?? ''),
+    phone: String(formData.get('phone') ?? ''),
+  }
+
   const validated = RegisterSchema.safeParse({
     email: formData.get('email'),
     password: formData.get('password'),
@@ -55,14 +66,14 @@ export async function registerAction(
   })
 
   if (!validated.success) {
-    return { errors: validated.error.flatten().fieldErrors }
+    return { errors: validated.error.flatten().fieldErrors, values }
   }
 
   const { email, password, firstName, lastName, phone } = validated.data
 
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) {
-    return { message: 'Konto z tym adresem e-mail juz istnieje.' }
+    return { message: 'Konto z tym adresem e-mail juz istnieje.', values }
   }
 
   const passwordHash = await hashPassword(password)

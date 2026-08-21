@@ -74,6 +74,16 @@ export type RegisterFormState =
       }
       message?: string
       success?: boolean
+      // Wartosci wprowadzone przez uzytkownika, zwracane po nieudanej probie,
+      // zeby formularz mogl je przywrocic zamiast czyscic (poza boxami PESEL).
+      values?: {
+        email?: string
+        password?: string
+        confirmPassword?: string
+        firstName?: string
+        lastName?: string
+        phone?: string
+      }
     }
   | undefined
 
