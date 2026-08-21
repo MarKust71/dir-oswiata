@@ -7,7 +7,7 @@ import { getSession } from '@/lib/session'
 import { Role, AccountStatus } from '@/generated/prisma/enums'
 
 /**
- * Zawsze dociga świeży rekord z bazy, zamiast ufać payloadowi JWT z ciasteczka -
+ * Zawsze dociąga świeży rekord z bazy, zamiast ufać payloadowi JWT z ciasteczka -
  * dzięki temu dezaktywacja konta przez admina działa natychmiast przy kolejnym zadaniu.
  */
 export const getCurrentUser = cache(async () => {

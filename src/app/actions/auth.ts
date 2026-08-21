@@ -43,8 +43,8 @@ export async function registerAction(
     String(formData.get(`peselDigit-${pos}`) ?? '')
   )
 
-  // Surowe wartosci z formularza, do odeslania z powrotem po nieudanej probie -
-  // pozwalaja przywrocic wypelnione pola (poza boxami PESEL).
+  // Surowe wartości z formularza, do odesłania z powrotem po nieudanej próbie -
+  // pozwalają przywrócić wypełnione pola (poza boxami PESEL).
   const values = {
     email: String(formData.get('email') ?? ''),
     password: String(formData.get('password') ?? ''),
