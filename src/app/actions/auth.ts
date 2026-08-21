@@ -8,6 +8,10 @@ import { hashPassword, verifyPassword } from '@/lib/password'
 import { createSession, deleteSession } from '@/lib/session'
 import { homePathForRole } from '@/lib/dal'
 import {
+  DB_CONNECTION_ERROR_MESSAGE,
+  isDatabaseConnectionError,
+} from '@/lib/db-error'
+import {
   RegisterSchema,
   LoginSchema,
   type RegisterFormState,
@@ -71,32 +75,39 @@ export async function registerAction(
 
   const { email, password, firstName, lastName, phone } = validated.data
 
-  const existing = await prisma.user.findUnique({ where: { email } })
-  if (existing) {
-    return { message: 'Konto z tym adresem e-mail juz istnieje.', values }
-  }
+  try {
+    const existing = await prisma.user.findUnique({ where: { email } })
+    if (existing) {
+      return { message: 'Konto z tym adresem e-mail juz istnieje.', values }
+    }
 
-  const passwordHash = await hashPassword(password)
-  const user = await prisma.user.create({
-    data: {
-      email,
-      passwordHash,
-      role: Role.STUDENT,
-      status: AccountStatus.PENDING_EMAIL,
-      firstName,
-      lastName,
-      phone: phone || null,
-      peselPositions: validated.data.peselPositions,
-      peselDigits: validated.data.peselDigits,
-    },
-  })
+    const passwordHash = await hashPassword(password)
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        role: Role.STUDENT,
+        status: AccountStatus.PENDING_EMAIL,
+        firstName,
+        lastName,
+        phone: phone || null,
+        peselPositions: validated.data.peselPositions,
+        peselDigits: validated.data.peselDigits,
+      },
+    })
 
-  await issueVerificationToken(user.id, user.email)
+    await issueVerificationToken(user.id, user.email)
 
-  return {
-    success: true,
-    message:
-      'Konto zostało utworzone. Sprawdź swoją skrzynkę e-mail i potwierdź adres, aby przejść do akceptacji administratora.',
+    return {
+      success: true,
+      message:
+        'Konto zostało utworzone. Sprawdź swoją skrzynkę e-mail i potwierdź adres, aby przejść do akceptacji administratora.',
+    }
+  } catch (error) {
+    if (isDatabaseConnectionError(error)) {
+      return { message: DB_CONNECTION_ERROR_MESSAGE, values }
+    }
+    throw error
   }
 }
 
@@ -115,7 +126,16 @@ export async function loginAction(
 
   const { email, password } = validated.data
 
-  const user = await prisma.user.findUnique({ where: { email } })
+  let user
+  try {
+    user = await prisma.user.findUnique({ where: { email } })
+  } catch (error) {
+    if (isDatabaseConnectionError(error)) {
+      return { message: DB_CONNECTION_ERROR_MESSAGE }
+    }
+    throw error
+  }
+
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     return { message: 'Nieprawidłowy e-mail lub hasło.' }
   }
@@ -148,57 +168,75 @@ export async function logoutAction() {
 }
 
 export async function verifyEmailAction(token: string) {
-  const record = await prisma.verificationToken.findUnique({
-    where: { token },
-  })
+  try {
+    const record = await prisma.verificationToken.findUnique({
+      where: { token },
+    })
 
-  if (!record) {
-    return {
-      success: false as const,
-      message: 'Link weryfikacyjny jest nieprawidłowy lub został już użyty.',
+    if (!record) {
+      return {
+        success: false as const,
+        message: 'Link weryfikacyjny jest nieprawidłowy lub został już użyty.',
+      }
     }
-  }
 
-  if (record.expiresAt < new Date()) {
-    await prisma.verificationToken.delete({ where: { id: record.id } })
+    if (record.expiresAt < new Date()) {
+      await prisma.verificationToken.delete({ where: { id: record.id } })
+
+      return {
+        success: false as const,
+        message:
+          'Link weryfikacyjny wygasł. Zarejestruj się ponownie lub poproś o nowy link.',
+      }
+    }
+
+    const [verifiedUser] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: record.userId },
+        data: {
+          emailVerifiedAt: new Date(),
+          status: AccountStatus.PENDING_APPROVAL,
+        },
+      }),
+      prisma.verificationToken.delete({ where: { id: record.id } }),
+    ])
+
+    const notificationEmails = await getNotificationEmails()
+    await sendPendingApprovalNotification(
+      notificationEmails,
+      verifiedUser.email
+    )
 
     return {
-      success: false as const,
+      success: true as const,
       message:
-        'Link weryfikacyjny wygasł. Zarejestruj się ponownie lub poproś o nowy link.',
+        'Adres e-mail został potwierdzony. Konto oczekuje teraz na akceptację administratora. O aktywacji konta poinformujemy Cię osobnym e-mailem.',
     }
-  }
-
-  const [verifiedUser] = await prisma.$transaction([
-    prisma.user.update({
-      where: { id: record.userId },
-      data: {
-        emailVerifiedAt: new Date(),
-        status: AccountStatus.PENDING_APPROVAL,
-      },
-    }),
-    prisma.verificationToken.delete({ where: { id: record.id } }),
-  ])
-
-  const notificationEmails = await getNotificationEmails()
-  await sendPendingApprovalNotification(notificationEmails, verifiedUser.email)
-
-  return {
-    success: true as const,
-    message:
-      'Adres e-mail został potwierdzony. Konto oczekuje teraz na akceptację administratora. O aktywacji konta poinformujemy Cię osobnym e-mailem.',
+  } catch (error) {
+    if (isDatabaseConnectionError(error)) {
+      return { success: false as const, message: DB_CONNECTION_ERROR_MESSAGE }
+    }
+    throw error
   }
 }
 
 export async function resendVerificationAction(email: string) {
   const normalizedEmail = email.trim().toLowerCase()
-  const user = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
-  })
 
-  if (user && user.status === AccountStatus.PENDING_EMAIL) {
-    await prisma.verificationToken.deleteMany({ where: { userId: user.id } })
-    await issueVerificationToken(user.id, user.email)
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    })
+
+    if (user && user.status === AccountStatus.PENDING_EMAIL) {
+      await prisma.verificationToken.deleteMany({ where: { userId: user.id } })
+      await issueVerificationToken(user.id, user.email)
+    }
+  } catch (error) {
+    if (isDatabaseConnectionError(error)) {
+      return { message: DB_CONNECTION_ERROR_MESSAGE }
+    }
+    throw error
   }
 
   // Zawsze ten sam komunikat, niezależnie od tego czy konto istnieje - żeby nie ujawniać,

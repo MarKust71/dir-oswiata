@@ -4,6 +4,10 @@ import { redirect } from 'next/navigation'
 
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import {
+  DB_CONNECTION_ERROR_MESSAGE,
+  isDatabaseConnectionError,
+} from '@/lib/db-error'
 import { Role, AccountStatus } from '@/generated/prisma/enums'
 
 /**
@@ -14,20 +18,31 @@ export const getCurrentUser = cache(async () => {
   const session = await getSession()
   if (!session) return null
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      status: true,
-      firstName: true,
-      lastName: true,
-      phone: true,
-      peselPositions: true,
-      peselDigits: true,
-    },
-  })
+  let user
+  try {
+    user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        status: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        peselPositions: true,
+        peselDigits: true,
+      },
+    })
+  } catch (error) {
+    // Rzucamy dalej zwykły Error z bezpiecznym komunikatem, żeby złapały go
+    // error.tsx / global-error.tsx (SiteHeader w root layout korzysta z tej
+    // funkcji na każdej stronie).
+    if (isDatabaseConnectionError(error)) {
+      throw new Error(DB_CONNECTION_ERROR_MESSAGE)
+    }
+    throw error
+  }
 
   if (!user || user.status !== AccountStatus.ACTIVE) {
     return null
