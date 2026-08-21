@@ -6,6 +6,10 @@ import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
 import { canManageAccount, canAssignRole } from '@/lib/permissions'
 import { sendAccountActivatedEmail } from '@/lib/mailer'
+import {
+  DB_CONNECTION_ERROR_MESSAGE,
+  isDatabaseConnectionError,
+} from '@/lib/db-error'
 import { AccountStatus, Role } from '@/generated/prisma/enums'
 
 export type AdminActionState = { message?: string; error?: string } | undefined
@@ -17,75 +21,98 @@ async function loadTarget(userId: string) {
   })
 }
 
+function toDbConnectionErrorState(error: unknown) {
+  if (
+    isDatabaseConnectionError(error) ||
+    (error instanceof Error && error.message === DB_CONNECTION_ERROR_MESSAGE)
+  ) {
+    return { error: DB_CONNECTION_ERROR_MESSAGE }
+  }
+
+  return null
+}
+
 export async function setAccountStatusAction(
   userId: string,
   nextStatus: typeof AccountStatus.ACTIVE | typeof AccountStatus.DISABLED
 ): Promise<AdminActionState> {
-  const actor = await requireRole([Role.ADMIN, Role.USER])
+  try {
+    const actor = await requireRole([Role.ADMIN, Role.USER])
 
-  const target = await loadTarget(userId)
-  if (!target) return { error: 'Nie znaleziono konta.' }
+    const target = await loadTarget(userId)
+    if (!target) return { error: 'Nie znaleziono konta.' }
 
-  if (!canManageAccount(actor, target)) {
-    return { error: 'Brak uprawnień do zarządzania tym kontem.' }
+    if (!canManageAccount(actor, target)) {
+      return { error: 'Brak uprawnień do zarządzania tym kontem.' }
+    }
+
+    if (
+      nextStatus === AccountStatus.ACTIVE &&
+      target.status !== AccountStatus.PENDING_APPROVAL &&
+      target.status !== AccountStatus.DISABLED
+    ) {
+      return { error: 'Tego konta nie można teraz aktywować.' }
+    }
+    if (
+      nextStatus === AccountStatus.DISABLED &&
+      target.status !== AccountStatus.ACTIVE
+    ) {
+      return { error: 'Można dezaktywować tylko aktywne konta.' }
+    }
+    if (target.id === actor.id) {
+      return { error: 'Nie możesz zmienić statusu własnego konta.' }
+    }
+
+    await prisma.user.update({
+      where: { id: target.id },
+      data: { status: nextStatus },
+    })
+
+    if (nextStatus === AccountStatus.ACTIVE) {
+      await sendAccountActivatedEmail(target.email)
+    }
+
+    revalidatePath('/dashboard')
+
+    return { message: 'Zapisano zmianę statusu konta.' }
+  } catch (error) {
+    const dbErrorState = toDbConnectionErrorState(error)
+    if (dbErrorState) return dbErrorState
+    throw error
   }
-
-  if (
-    nextStatus === AccountStatus.ACTIVE &&
-    target.status !== AccountStatus.PENDING_APPROVAL &&
-    target.status !== AccountStatus.DISABLED
-  ) {
-    return { error: 'Tego konta nie można teraz aktywować.' }
-  }
-  if (
-    nextStatus === AccountStatus.DISABLED &&
-    target.status !== AccountStatus.ACTIVE
-  ) {
-    return { error: 'Można dezaktywować tylko aktywne konta.' }
-  }
-  if (target.id === actor.id) {
-    return { error: 'Nie możesz zmienić statusu własnego konta.' }
-  }
-
-  await prisma.user.update({
-    where: { id: target.id },
-    data: { status: nextStatus },
-  })
-
-  if (nextStatus === AccountStatus.ACTIVE) {
-    await sendAccountActivatedEmail(target.email)
-  }
-
-  revalidatePath('/dashboard')
-
-  return { message: 'Zapisano zmianę statusu konta.' }
 }
 
 export async function setAccountRoleAction(
   userId: string,
   nextRole: Role
 ): Promise<AdminActionState> {
-  const actor = await requireRole([Role.ADMIN, Role.USER])
+  try {
+    const actor = await requireRole([Role.ADMIN, Role.USER])
 
-  const target = await loadTarget(userId)
-  if (!target) return { error: 'Nie znaleziono konta.' }
+    const target = await loadTarget(userId)
+    if (!target) return { error: 'Nie znaleziono konta.' }
 
-  if (target.id === actor.id) {
-    return { error: 'Nie możesz zmienić własnej roli.' }
+    if (target.id === actor.id) {
+      return { error: 'Nie możesz zmienić własnej roli.' }
+    }
+    if (!canManageAccount(actor, target)) {
+      return { error: 'Brak uprawnień do zarządzania tym kontem.' }
+    }
+    if (!canAssignRole(actor, nextRole)) {
+      return { error: 'Brak uprawnień do nadania tej roli.' }
+    }
+
+    await prisma.user.update({
+      where: { id: target.id },
+      data: { role: nextRole },
+    })
+
+    revalidatePath('/dashboard')
+
+    return { message: 'Zapisano zmianę roli.' }
+  } catch (error) {
+    const dbErrorState = toDbConnectionErrorState(error)
+    if (dbErrorState) return dbErrorState
+    throw error
   }
-  if (!canManageAccount(actor, target)) {
-    return { error: 'Brak uprawnień do zarządzania tym kontem.' }
-  }
-  if (!canAssignRole(actor, nextRole)) {
-    return { error: 'Brak uprawnień do nadania tej roli.' }
-  }
-
-  await prisma.user.update({
-    where: { id: target.id },
-    data: { role: nextRole },
-  })
-
-  revalidatePath('/dashboard')
-
-  return { message: 'Zapisano zmianę roli.' }
 }
