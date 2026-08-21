@@ -24,6 +24,12 @@ export function RegisterForm() {
   // na serwerze i kliencie, żeby uniknąć błędu hydracji.
   const [peselPositions, setPeselPositions] = useState<number[]>([])
   const peselInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
+  // Zmienia sie po kazdej nieudanej probie wyslania formularza - uzywana jako
+  // `key` pol, zeby wymusic ich remount z nowym `defaultValue` (odtworzenie
+  // wpisanych wartosci) oraz calkowite odswiezenie boxow PESEL (nowy uklad,
+  // wyczyszczone cyfry).
+  const [attempt, setAttempt] = useState(0)
+  const [prevState, setPrevState] = useState(state)
 
   useEffect(() => {
     // Celowo: to jedyny sposob na wylosowanie pozycji po stronie klienta bez
@@ -31,6 +37,16 @@ export function RegisterForm() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPeselPositions(pickRandomPeselPositions())
   }, [])
+
+  // Aktualizacja podczas renderu (a nie w efekcie) - dzieki temu `attempt` i
+  // nowy uklad PESEL zmieniaja sie w tym samym przebiegu renderu co nowy
+  // `defaultValue` z akcji, bez posredniej klatki z tym samym `key`, ale innym
+  // `defaultValue` (co Base UI zglaszaloby jako blad).
+  if (state !== prevState) {
+    setPrevState(state)
+    setAttempt((a) => a + 1)
+    setPeselPositions(pickRandomPeselPositions())
+  }
 
   if (state?.success) {
     return (
@@ -59,11 +75,13 @@ export function RegisterForm() {
             <RequiredMark />
           </Label>
           <Input
+            key={attempt}
             id="email"
             name="email"
             type="email"
             autoComplete="email"
             placeholder="np. jan.kowalski@przyklad.pl"
+            defaultValue={state?.values?.email}
             required
           />
           {state?.errors?.email && (
@@ -77,10 +95,12 @@ export function RegisterForm() {
             <RequiredMark />
           </Label>
           <Input
+            key={attempt}
             id="password"
             name="password"
             type="password"
             autoComplete="new-password"
+            defaultValue={state?.values?.password}
             required
           />
           {state?.errors?.password && (
@@ -98,10 +118,12 @@ export function RegisterForm() {
             <RequiredMark />
           </Label>
           <Input
+            key={attempt}
             id="confirmPassword"
             name="confirmPassword"
             type="password"
             autoComplete="new-password"
+            defaultValue={state?.values?.confirmPassword}
             required
           />
           {state?.errors?.confirmPassword && (
@@ -125,9 +147,11 @@ export function RegisterForm() {
             <RequiredMark />
           </Label>
           <Input
+            key={attempt}
             id="firstName"
             name="firstName"
             autoComplete="given-name"
+            defaultValue={state?.values?.firstName}
             required
           />
           {state?.errors?.firstName && (
@@ -143,9 +167,11 @@ export function RegisterForm() {
             <RequiredMark />
           </Label>
           <Input
+            key={attempt}
             id="lastName"
             name="lastName"
             autoComplete="family-name"
+            defaultValue={state?.values?.lastName}
             required
           />
           {state?.errors?.lastName && (
@@ -173,6 +199,7 @@ export function RegisterForm() {
                     <>
                       <input type="hidden" name="peselPositions" value={i} />
                       <Input
+                        key={attempt}
                         ref={(el) => {
                           peselInputRefs.current[i] = el
                         }}
@@ -226,12 +253,14 @@ export function RegisterForm() {
             zostaw numer telefonu.
           </p>
           <Input
+            key={attempt}
             id="phone"
             name="phone"
             type="tel"
             inputMode="tel"
             autoComplete="tel"
             placeholder="np. +48123456789"
+            defaultValue={state?.values?.phone}
             onChange={(e) => {
               const raw = e.target.value
               const hasPlus = raw.startsWith('+')
