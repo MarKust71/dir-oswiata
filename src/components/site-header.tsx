@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import packageJson from '../../package.json'
 import { getCurrentUser } from '@/lib/dal'
 import { logoutAction } from '@/app/actions/auth'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -14,12 +15,17 @@ export async function SiteHeader() {
   return (
     <header className="border-b bg-background">
       <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-4 px-4">
-        <Link
-          href={user ? homePathForRole(user.role) : '/'}
-          className="font-heading text-base font-semibold"
-        >
-          DIR Oświata
-        </Link>
+        <div className="flex items-baseline gap-2">
+          <Link
+            href={user ? homePathForRole(user.role) : '/'}
+            className="font-heading text-base font-semibold"
+          >
+            DIR Oświata
+          </Link>
+          <span className="text-xs font-normal text-muted-foreground">
+            wersja: {packageJson.version}
+          </span>
+        </div>
 
         {user ? (
           <div className="flex items-center gap-3">
