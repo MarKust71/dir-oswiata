@@ -25,8 +25,8 @@ type AccountActionsProps = {
   status: AccountStatus
   canManage: boolean
   assignableRoles: Role[]
-  // "compact" ustawia kontrolki jedna pod druga, zeby nie poszerzac kolumny
-  // w tabeli desktopowej; "wide" (domyslnie) uklada je obok siebie - uzywane
+  // "compact" ustawia kontrolki jedna pod druga, żeby nie poszerzać kolumny
+  // w tabeli desktopowej; "wide" (domyślnie) układa je obok siebie - używane
   // w szerszych kartach mobilnych.
   layout?: 'compact' | 'wide'
 }

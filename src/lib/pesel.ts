@@ -12,7 +12,7 @@ export function pickRandomPeselPositions(): number[] {
   return [...positions].sort((a, b) => a - b)
 }
 
-/** Buduje 11-znakowa maske PESEL: podane cyfry na swoich pozycjach, reszta jako "•". */
+/** Buduje 11-znakową maskę PESEL: podane cyfry na swoich pozycjach, reszta jako "•". */
 export function maskPesel(positions: number[], digits: string[]): string[] {
   const cells = Array.from({ length: PESEL_LENGTH }, () => '•')
 

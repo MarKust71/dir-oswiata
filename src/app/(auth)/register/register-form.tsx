@@ -24,24 +24,24 @@ export function RegisterForm() {
   // na serwerze i kliencie, żeby uniknąć błędu hydracji.
   const [peselPositions, setPeselPositions] = useState<number[]>([])
   const peselInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
-  // Zmienia sie po kazdej nieudanej probie wyslania formularza - uzywana jako
-  // `key` pol, zeby wymusic ich remount z nowym `defaultValue` (odtworzenie
-  // wpisanych wartosci) oraz calkowite odswiezenie boxow PESEL (nowy uklad,
+  // Zmienia się po każdej nieudanej próbie wysłania formularza - używana jako
+  // `key` pól, żeby wymusić ich remount z nowym `defaultValue` (odtworzenie
+  // wpisanych wartości) oraz całkowite odświeżenie boxów PESEL (nowy układ,
   // wyczyszczone cyfry).
   const [attempt, setAttempt] = useState(0)
   const [prevState, setPrevState] = useState(state)
 
   useEffect(() => {
-    // Celowo: to jedyny sposob na wylosowanie pozycji po stronie klienta bez
-    // rozjazdu SSR/hydracji (losowosc nie moze wystapic podczas renderu).
+    // Celowo: to jedyny sposób na wylosowanie pozycji po stronie klienta bez
+    // rozjazdu SSR/hydracji (losowość nie może wystąpić podczas renderu).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPeselPositions(pickRandomPeselPositions())
   }, [])
 
-  // Aktualizacja podczas renderu (a nie w efekcie) - dzieki temu `attempt` i
-  // nowy uklad PESEL zmieniaja sie w tym samym przebiegu renderu co nowy
-  // `defaultValue` z akcji, bez posredniej klatki z tym samym `key`, ale innym
-  // `defaultValue` (co Base UI zglaszaloby jako blad).
+  // Aktualizacja podczas renderu (a nie w efekcie) - dzięki temu `attempt` i
+  // nowy układ PESEL zmieniają się w tym samym przebiegu renderu co nowy
+  // `defaultValue` z akcji, bez pośredniej klatki z tym samym `key`, ale innym
+  // `defaultValue` (co Base UI zgłaszałoby jako błąd).
   if (state !== prevState) {
     setPrevState(state)
     setAttempt((a) => a + 1)

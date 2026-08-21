@@ -74,8 +74,8 @@ export type RegisterFormState =
       }
       message?: string
       success?: boolean
-      // Wartosci wprowadzone przez uzytkownika, zwracane po nieudanej probie,
-      // zeby formularz mogl je przywrocic zamiast czyscic (poza boxami PESEL).
+      // Wartości wprowadzone przez użytkownika, zwracane po nieudanej próbie,
+      // żeby formularz mógł je przywrócić, zamiast czyścić (poza boxami PESEL).
       values?: {
         email?: string
         password?: string
