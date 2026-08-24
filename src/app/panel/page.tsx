@@ -1,6 +1,6 @@
 import { requireUser } from '@/lib/dal'
 import { roleLabels } from '@/lib/labels'
-import { getResultsVisibleFrom } from '@/lib/settings'
+import { getResultsVisibleFrom, getResultsVisibleUntil } from '@/lib/settings'
 import { Role } from '@/generated/prisma/enums'
 import { PeselBoxes } from '@/components/pesel-boxes'
 import {
@@ -10,6 +10,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+
+import { ApplicationNumberForm } from './application-number-form'
 
 const availabilityDateFormatter = new Intl.DateTimeFormat('pl-PL', {
   day: 'numeric',
@@ -34,8 +36,29 @@ export default async function PanelPage() {
 
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
 
-  const resultsVisibleFrom =
-    user.role === Role.STUDENT ? await getResultsVisibleFrom() : null
+  const [resultsVisibleFrom, resultsVisibleUntil] =
+    user.role === Role.STUDENT
+      ? await Promise.all([getResultsVisibleFrom(), getResultsVisibleUntil()])
+      : [null, null]
+
+  const now = new Date()
+  const isBeforeResultsWindow = Boolean(
+    resultsVisibleFrom && now < resultsVisibleFrom
+  )
+  const isWithinResultsWindow = Boolean(
+    resultsVisibleFrom &&
+    resultsVisibleUntil &&
+    now >= resultsVisibleFrom &&
+    now <= resultsVisibleUntil
+  )
+  const needsApplicationNumberVerification =
+    isWithinResultsWindow &&
+    user.resultId !== null &&
+    user.applicationNumberVerifiedAt === null
+  const applicationNumberAlreadyVerified =
+    isWithinResultsWindow &&
+    user.resultId !== null &&
+    user.applicationNumberVerifiedAt !== null
 
   return (
     <div className="flex flex-1 items-start justify-center px-4 py-8 sm:items-center">
@@ -76,9 +99,15 @@ export default async function PanelPage() {
               digits={user.peselDigits}
             />
           </div>
-          {resultsVisibleFrom && (
+          {isBeforeResultsWindow && resultsVisibleFrom && (
             <p className="rounded-md bg-muted p-3 text-muted-foreground">
               {formatResultsAvailabilityMessage(resultsVisibleFrom)}
+            </p>
+          )}
+          {needsApplicationNumberVerification && <ApplicationNumberForm />}
+          {applicationNumberAlreadyVerified && (
+            <p className="rounded-md bg-muted p-3 text-muted-foreground">
+              Numer wniosku został zweryfikowany.
             </p>
           )}
         </CardContent>

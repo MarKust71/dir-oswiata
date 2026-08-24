@@ -7,6 +7,11 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { roleLabels } from '@/lib/labels'
 import { homePathForRole } from '@/lib/dal'
+import {
+  CONTACT_EMAIL,
+  CONTACT_PHONE_DISPLAY,
+  CONTACT_PHONE_HREF,
+} from '@/lib/contact'
 import { Role } from '@/generated/prisma/enums'
 
 export async function SiteHeader() {
@@ -66,17 +71,17 @@ export async function SiteHeader() {
 
       <div className="border-t px-4 py-1.5 text-center text-xs text-muted-foreground">
         <a
-          href="mailto:oswiata@izba.wroc.pl"
+          href={`mailto:${CONTACT_EMAIL}`}
           className="hover:text-foreground hover:underline"
         >
-          oswiata@izba.wroc.pl
+          {CONTACT_EMAIL}
         </a>
         {' | '}
         <a
-          href="tel:+48713448691"
+          href={CONTACT_PHONE_HREF}
           className="hover:text-foreground hover:underline"
         >
-          tel. +48 71 3448691 w. 43
+          {CONTACT_PHONE_DISPLAY}
         </a>
       </div>
     </header>

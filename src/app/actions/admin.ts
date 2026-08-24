@@ -76,7 +76,15 @@ export async function setAccountStatusAction(
 
     await prisma.user.update({
       where: { id: target.id },
-      data: { status: nextStatus },
+      data: {
+        status: nextStatus,
+        // Przy (ponownej) aktywacji dajemy uzytkownikowi swiezy komplet prob
+        // wprowadzenia numeru wniosku - poprzednie zablokowanie zostalo juz
+        // rozwiazane przez administratora.
+        ...(nextStatus === AccountStatus.ACTIVE && {
+          applicationNumberAttempts: 0,
+        }),
+      },
     })
 
     if (nextStatus === AccountStatus.ACTIVE) {

@@ -41,6 +41,11 @@ model User {
   // wyniku egzaminu - zob. src/lib/results-matching.ts.
   resultId           String?             @unique
   result             Results?            @relation(fields: [resultId], references: [id])
+  // Weryfikacja tożsamości numerem wniosku w okresie udostępnienia wyników
+  // (results_visible_from/until) - zob. src/app/actions/verify-application-number.ts.
+  // Po 3 błędnych próbach konto zostaje zablokowane (status DISABLED).
+  applicationNumberAttempts   Int       @default(0)
+  applicationNumberVerifiedAt DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   verificationTokens VerificationToken[]
