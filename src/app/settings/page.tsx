@@ -1,5 +1,12 @@
 import { requireRole } from '@/lib/dal'
-import { getNotificationEmails } from '@/lib/settings'
+import {
+  getMaxApplicationNumberAttempts,
+  getMaxResultsViewCount,
+  getNotificationEmails,
+  getResultsVisibleFrom,
+  getResultsVisibleUntil,
+} from '@/lib/settings'
+import { toWarsawLocalDateTimeInputValue } from '@/lib/warsaw-time'
 import { Role } from '@/generated/prisma/enums'
 import {
   Card,
@@ -11,11 +18,24 @@ import {
 
 import { NotificationEmailsForm } from './notification-emails-form'
 import { ImportResultsForm } from './import-results-form'
+import { ResultsWindowForm } from './results-window-form'
+import { ResultsLimitsForm } from './results-limits-form'
 
 export default async function SettingsPage() {
   await requireRole([Role.ADMIN])
 
   const emails = await getNotificationEmails()
+  const [
+    resultsVisibleFrom,
+    resultsVisibleUntil,
+    maxApplicationNumberAttempts,
+    maxResultsViewCount,
+  ] = await Promise.all([
+    getResultsVisibleFrom(),
+    getResultsVisibleUntil(),
+    getMaxApplicationNumberAttempts(),
+    getMaxResultsViewCount(),
+  ])
 
   return (
     <div className="flex flex-col gap-6">
@@ -39,6 +59,52 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <NotificationEmailsForm initialEmails={emails} />
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Okres udostępnienia wyników
+          </CardTitle>
+          <CardDescription>
+            Studenci zobaczą swoje wyniki dopiero po nadejściu daty początkowej.
+            Wartości podawane są w czasie lokalnym Warszawy.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResultsWindowForm
+            initialFrom={
+              resultsVisibleFrom
+                ? toWarsawLocalDateTimeInputValue(resultsVisibleFrom)
+                : ''
+            }
+            initialUntil={
+              resultsVisibleUntil
+                ? toWarsawLocalDateTimeInputValue(resultsVisibleUntil)
+                : ''
+            }
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Limity weryfikacji numeru wniosku
+          </CardTitle>
+          <CardDescription>
+            Po przekroczeniu któregokolwiek z limitów konto studenta zostaje
+            zablokowane.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResultsLimitsForm
+            initialMaxApplicationNumberAttempts={String(
+              maxApplicationNumberAttempts
+            )}
+            initialMaxResultsViewCount={String(maxResultsViewCount)}
+          />
         </CardContent>
       </Card>
 

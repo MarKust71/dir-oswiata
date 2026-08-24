@@ -32,6 +32,7 @@ export const getCurrentUser = cache(async () => {
         phone: true,
         peselPositions: true,
         peselDigits: true,
+        resultId: true,
       },
     })
   } catch (error) {

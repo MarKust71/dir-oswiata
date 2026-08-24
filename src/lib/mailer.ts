@@ -1,6 +1,8 @@
 import 'server-only'
 import nodemailer from 'nodemailer'
 
+import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from '@/lib/contact'
+
 const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM, APP_URL } =
   process.env
 
@@ -128,6 +130,148 @@ export async function sendAccountActivatedEmail(email: string) {
     // konto jest juz aktywne w bazie niezaleznie od tego, czy mail dotarl.
     console.error(
       `[mailer] Nie udało się wysłać maila o aktywacji konta do ${email}:`,
+      error
+    )
+  }
+}
+
+export async function sendAccountLockedAdminNotification(
+  adminEmails: string[],
+  userEmail: string
+) {
+  if (adminEmails.length === 0) return
+
+  const text = `Konto użytkownika "${userEmail}" zostało zablokowane ze względu na trzykrotne wprowadzenie błędnego numeru wniosku.`
+  const transporter = getTransporter()
+
+  if (!transporter) {
+    console.warn(
+      `[mailer] SMTP nie jest skonfigurowany. Powiadomienie: ${text}`
+    )
+
+    return
+  }
+
+  await Promise.all(
+    adminEmails.map(async (to) => {
+      try {
+        const info = await transporter.sendMail({
+          from: SMTP_FROM || SMTP_USER,
+          to,
+          subject: 'Konto użytkownika zostało zablokowane',
+          text,
+        })
+
+        console.log(
+          `[mailer] Wysłano powiadomienie o zablokowaniu konta do ${to} (messageId: ${info.messageId}, response: ${info.response})`
+        )
+      } catch (error) {
+        console.error(
+          `[mailer] Nie udało się wysłać powiadomienia o zablokowaniu konta do ${to}:`,
+          error
+        )
+      }
+    })
+  )
+}
+
+export async function sendAccountLockedUserEmail(email: string) {
+  const text = `Twoje konto "DIR Oświata" zostało zablokowane. Skontaktuj się z administratorem.\n\n${CONTACT_EMAIL}, ${CONTACT_PHONE_DISPLAY}`
+  const transporter = getTransporter()
+
+  if (!transporter) {
+    console.warn(`[mailer] SMTP nie jest skonfigurowany. ${text}`)
+
+    return
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from: SMTP_FROM || SMTP_USER,
+      to: email,
+      subject: 'Twoje konto zostało zablokowane',
+      text,
+      html: `<p>Twoje konto "DIR Oświata" zostało zablokowane. Skontaktuj się z administratorem.</p><p>${CONTACT_EMAIL}, ${CONTACT_PHONE_DISPLAY}</p>`,
+    })
+
+    console.log(
+      `[mailer] Wysłano mail o zablokowaniu konta do ${email} (messageId: ${info.messageId}, response: ${info.response})`
+    )
+  } catch (error) {
+    // Blad wysylki nie moze cofnac zablokowania konta - konto pozostaje
+    // zablokowane w bazie niezaleznie od tego, czy mail dotarl.
+    console.error(
+      `[mailer] Nie udało się wysłać maila o zablokowaniu konta do ${email}:`,
+      error
+    )
+  }
+}
+
+export async function sendResultsViewLimitReachedAdminNotification(
+  adminEmails: string[],
+  userEmail: string
+) {
+  if (adminEmails.length === 0) return
+
+  const text = `Konto użytkownika "${userEmail}" zostało zablokowane ze względu na wykorzystanie limitu 3 wyświetleń wyników.`
+  const transporter = getTransporter()
+
+  if (!transporter) {
+    console.warn(
+      `[mailer] SMTP nie jest skonfigurowany. Powiadomienie: ${text}`
+    )
+
+    return
+  }
+
+  await Promise.all(
+    adminEmails.map(async (to) => {
+      try {
+        const info = await transporter.sendMail({
+          from: SMTP_FROM || SMTP_USER,
+          to,
+          subject: 'Konto użytkownika zostało zablokowane',
+          text,
+        })
+
+        console.log(
+          `[mailer] Wysłano powiadomienie o zablokowaniu konta (limit wyświetleń) do ${to} (messageId: ${info.messageId}, response: ${info.response})`
+        )
+      } catch (error) {
+        console.error(
+          `[mailer] Nie udało się wysłać powiadomienia o zablokowaniu konta (limit wyświetleń) do ${to}:`,
+          error
+        )
+      }
+    })
+  )
+}
+
+export async function sendResultsViewLimitReachedUserEmail(email: string) {
+  const text = `Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.\n\n${CONTACT_EMAIL}, ${CONTACT_PHONE_DISPLAY}`
+  const transporter = getTransporter()
+
+  if (!transporter) {
+    console.warn(`[mailer] SMTP nie jest skonfigurowany. ${text}`)
+
+    return
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from: SMTP_FROM || SMTP_USER,
+      to: email,
+      subject: 'Twoje konto zostało zablokowane',
+      text,
+      html: `<p>Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.</p><p>${CONTACT_EMAIL}, ${CONTACT_PHONE_DISPLAY}</p>`,
+    })
+
+    console.log(
+      `[mailer] Wysłano mail o zablokowaniu konta (limit wyświetleń) do ${email} (messageId: ${info.messageId}, response: ${info.response})`
+    )
+  } catch (error) {
+    console.error(
+      `[mailer] Nie udało się wysłać maila o zablokowaniu konta (limit wyświetleń) do ${email}:`,
       error
     )
   }
