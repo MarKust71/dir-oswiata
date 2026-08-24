@@ -5,6 +5,7 @@ import ExcelJS from 'exceljs'
 
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
+import { relinkAllStudentsToResults } from '@/lib/results-matching'
 import {
   DB_CONNECTION_ERROR_MESSAGE,
   isDatabaseConnectionError,
@@ -168,10 +169,13 @@ export async function importResultsAction(
       prisma.results.createMany({ data: rows }),
     ])
 
+    const linkedCount = await relinkAllStudentsToResults()
+
     revalidatePath('/settings')
+    revalidatePath('/dashboard')
 
     return {
-      message: `Usunięto poprzednie dane i zaimportowano ${rows.length} wierszy.`,
+      message: `Usunięto poprzednie dane i zaimportowano ${rows.length} wierszy. Powiązano ${linkedCount} kont uczniów z wynikami.`,
     }
   } catch (error) {
     const dbErrorState = toDbConnectionErrorState(error)
