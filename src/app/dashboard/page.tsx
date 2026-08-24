@@ -23,13 +23,8 @@ import { Badge } from '@/components/ui/badge'
 
 import { AccountActions } from './account-actions'
 import { ResultDetailsButton } from './result-details'
-
-const STATUS_ORDER: Record<AccountStatus, number> = {
-  [AccountStatus.PENDING_APPROVAL]: 0,
-  [AccountStatus.PENDING_EMAIL]: 1,
-  [AccountStatus.ACTIVE]: 2,
-  [AccountStatus.DISABLED]: 3,
-}
+import { RoleFilter } from './role-filter'
+import { parseSelectedRoles } from './roles'
 
 const STATUS_BADGE_VARIANT: Record<
   AccountStatus,
@@ -108,10 +103,15 @@ function ResultCell({
   )
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage(props: PageProps<'/dashboard'>) {
   const actor = await requireRole([Role.ADMIN, Role.USER])
 
+  const searchParams = await props.searchParams
+  const selectedRoles = parseSelectedRoles(searchParams.role)
+
   const users = await prisma.user.findMany({
+    where: { role: { in: selectedRoles } },
+    orderBy: { email: 'asc' },
     select: {
       id: true,
       email: true,
@@ -138,12 +138,7 @@ export default async function DashboardPage() {
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
   })
-
-  const sorted = [...users].sort(
-    (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
-  )
 
   const assignableRoles: Role[] =
     actor.role === Role.ADMIN
@@ -163,6 +158,8 @@ export default async function DashboardPage() {
         </p>
       </div>
 
+      <RoleFilter key={selectedRoles.join(',')} initialRoles={selectedRoles} />
+
       {/* Desktop: tabela */}
       <Card className="hidden md:block">
         <CardContent>
@@ -179,7 +176,7 @@ export default async function DashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sorted.map((user) => {
+              {users.map((user) => {
                 const canManage =
                   user.id !== actor.id && canManageAccount(actor, user)
 
@@ -221,7 +218,7 @@ export default async function DashboardPage() {
 
       {/* Mobile: karty */}
       <div className="flex flex-col gap-3 md:hidden">
-        {sorted.map((user) => {
+        {users.map((user) => {
           const canManage =
             user.id !== actor.id && canManageAccount(actor, user)
 
