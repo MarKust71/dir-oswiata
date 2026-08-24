@@ -1,5 +1,7 @@
 import { requireUser } from '@/lib/dal'
 import { roleLabels } from '@/lib/labels'
+import { getResultsVisibleFrom } from '@/lib/settings'
+import { Role } from '@/generated/prisma/enums'
 import { PeselBoxes } from '@/components/pesel-boxes'
 import {
   Card,
@@ -9,10 +11,31 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 
+const availabilityDateFormatter = new Intl.DateTimeFormat('pl-PL', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'Europe/Warsaw',
+})
+
+const availabilityTimeFormatter = new Intl.DateTimeFormat('pl-PL', {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: false,
+  timeZone: 'Europe/Warsaw',
+})
+
+function formatResultsAvailabilityMessage(from: Date) {
+  return `Wyniki zostaną udostępnione ${availabilityDateFormatter.format(from)} r. o godz. ${availabilityTimeFormatter.format(from)}.`
+}
+
 export default async function PanelPage() {
   const user = await requireUser()
 
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
+
+  const resultsVisibleFrom =
+    user.role === Role.STUDENT ? await getResultsVisibleFrom() : null
 
   return (
     <div className="flex flex-1 items-start justify-center px-4 py-8 sm:items-center">
@@ -53,6 +76,11 @@ export default async function PanelPage() {
               digits={user.peselDigits}
             />
           </div>
+          {resultsVisibleFrom && (
+            <p className="rounded-md bg-muted p-3 text-muted-foreground">
+              {formatResultsAvailabilityMessage(resultsVisibleFrom)}
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
