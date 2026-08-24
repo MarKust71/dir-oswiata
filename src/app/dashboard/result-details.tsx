@@ -65,11 +65,11 @@ export function ResultDetailsButton({
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col text-sm">
-          <DetailRow label="Wynik praktyczny" value={result.practicalScore} />
-          <DetailRow label="Wynik teoretyczny" value={result.theoryScore} />
-          <DetailRow label="Wynik końcowy" value={result.finalScore} />
           <DetailRow label="Ocena ustna" value={result.oralScore} />
           <DetailRow label="Ocena pisemna" value={result.writtenScore} />
+          <DetailRow label="Wynik teoretyczny" value={result.theoryScore} />
+          <DetailRow label="Wynik praktyczny" value={result.practicalScore} />
+          <DetailRow label="Wynik końcowy" value={result.finalScore} />
         </div>
       </DialogContent>
     </Dialog>
