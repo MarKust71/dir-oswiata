@@ -80,3 +80,40 @@ export function toWarsawLocalDateTimeInputValue(date: Date): string {
 
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
 }
+
+function formatOffset(offsetMinutes: number): string {
+  const sign = offsetMinutes >= 0 ? '+' : '-'
+  const abs = Math.abs(offsetMinutes)
+  const hours = String(Math.floor(abs / 60)).padStart(2, '0')
+  const minutes = String(abs % 60).padStart(2, '0')
+
+  return `${sign}${hours}:${minutes}`
+}
+
+/**
+ * Formatuje moment w czasie (Date) jako pełny ISO-8601 z jawnym przesunięciem
+ * strefy warszawskiej (np. "2026-08-31T07:00:00+02:00") zamiast czasu UTC
+ * ("Z") - żeby wartość w bazie danych czytało się wprost jako czas lokalny,
+ * mimo że to wciąż dokładnie ten sam moment w czasie.
+ */
+export function toWarsawOffsetISOString(date: Date): string {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: WARSAW_TIME_ZONE,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+
+  const parts: Record<string, string> = {}
+  for (const part of formatter.formatToParts(date)) {
+    if (part.type !== 'literal') parts[part.type] = part.value
+  }
+
+  const offsetMinutes = getTimeZoneOffsetMinutes(date, WARSAW_TIME_ZONE)
+
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}${formatOffset(offsetMinutes)}`
+}

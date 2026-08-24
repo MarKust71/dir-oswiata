@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { prisma } from '@/lib/prisma'
+import { toWarsawOffsetISOString } from '@/lib/warsaw-time'
 
 export const NOTIFICATION_EMAILS_KEY = 'emails_for_notifications'
 
@@ -27,16 +28,19 @@ export function getResultsVisibleUntil() {
 }
 
 export async function setResultsVisibilityWindow(from: Date, until: Date) {
+  const fromValue = toWarsawOffsetISOString(from)
+  const untilValue = toWarsawOffsetISOString(until)
+
   await prisma.$transaction([
     prisma.settings.upsert({
       where: { key: RESULTS_VISIBLE_FROM_KEY },
-      create: { key: RESULTS_VISIBLE_FROM_KEY, value: from.toISOString() },
-      update: { value: from.toISOString() },
+      create: { key: RESULTS_VISIBLE_FROM_KEY, value: fromValue },
+      update: { value: fromValue },
     }),
     prisma.settings.upsert({
       where: { key: RESULTS_VISIBLE_UNTIL_KEY },
-      create: { key: RESULTS_VISIBLE_UNTIL_KEY, value: until.toISOString() },
-      update: { value: until.toISOString() },
+      create: { key: RESULTS_VISIBLE_UNTIL_KEY, value: untilValue },
+      update: { value: untilValue },
     }),
   ])
 }
