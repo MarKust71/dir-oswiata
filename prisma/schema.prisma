@@ -37,6 +37,10 @@ model User {
   // oraz odpowiadajace im cyfry - do recznej weryfikacji tozsamosci przez administratora.
   peselPositions     Int[]               @default([])
   peselDigits        String[]            @default([])
+  // Powiązanie 1:1 z odnalezionym automatycznie (przy aktywacji konta) rekordem
+  // wyniku egzaminu - zob. src/lib/results-matching.ts.
+  resultId           String?             @unique
+  result             Results?            @relation(fields: [resultId], references: [id])
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   verificationTokens VerificationToken[]
@@ -64,6 +68,7 @@ model Results {
   applicationNumber String
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  user              User?
 }
 
 model VerificationToken {
