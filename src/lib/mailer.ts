@@ -206,3 +206,73 @@ export async function sendAccountLockedUserEmail(email: string) {
     )
   }
 }
+
+export async function sendResultsViewLimitReachedAdminNotification(
+  adminEmails: string[],
+  userEmail: string
+) {
+  if (adminEmails.length === 0) return
+
+  const text = `Konto użytkownika "${userEmail}" zostało zablokowane ze względu na wykorzystanie limitu 3 wyświetleń wyników.`
+  const transporter = getTransporter()
+
+  if (!transporter) {
+    console.warn(
+      `[mailer] SMTP nie jest skonfigurowany. Powiadomienie: ${text}`
+    )
+
+    return
+  }
+
+  await Promise.all(
+    adminEmails.map(async (to) => {
+      try {
+        const info = await transporter.sendMail({
+          from: SMTP_FROM || SMTP_USER,
+          to,
+          subject: 'Konto użytkownika zostało zablokowane',
+          text,
+        })
+
+        console.log(
+          `[mailer] Wysłano powiadomienie o zablokowaniu konta (limit wyświetleń) do ${to} (messageId: ${info.messageId}, response: ${info.response})`
+        )
+      } catch (error) {
+        console.error(
+          `[mailer] Nie udało się wysłać powiadomienia o zablokowaniu konta (limit wyświetleń) do ${to}:`,
+          error
+        )
+      }
+    })
+  )
+}
+
+export async function sendResultsViewLimitReachedUserEmail(email: string) {
+  const text = `Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.\n\n${CONTACT_EMAIL}, ${CONTACT_PHONE_DISPLAY}`
+  const transporter = getTransporter()
+
+  if (!transporter) {
+    console.warn(`[mailer] SMTP nie jest skonfigurowany. ${text}`)
+
+    return
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from: SMTP_FROM || SMTP_USER,
+      to: email,
+      subject: 'Twoje konto zostało zablokowane',
+      text,
+      html: `<p>Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.</p><p>${CONTACT_EMAIL}, ${CONTACT_PHONE_DISPLAY}</p>`,
+    })
+
+    console.log(
+      `[mailer] Wysłano mail o zablokowaniu konta (limit wyświetleń) do ${email} (messageId: ${info.messageId}, response: ${info.response})`
+    )
+  } catch (error) {
+    console.error(
+      `[mailer] Nie udało się wysłać maila o zablokowaniu konta (limit wyświetleń) do ${email}:`,
+      error
+    )
+  }
+}

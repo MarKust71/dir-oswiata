@@ -52,13 +52,7 @@ export default async function PanelPage() {
     now <= resultsVisibleUntil
   )
   const needsApplicationNumberVerification =
-    isWithinResultsWindow &&
-    user.resultId !== null &&
-    user.applicationNumberVerifiedAt === null
-  const applicationNumberAlreadyVerified =
-    isWithinResultsWindow &&
-    user.resultId !== null &&
-    user.applicationNumberVerifiedAt !== null
+    isWithinResultsWindow && user.resultId !== null
 
   return (
     <div className="flex flex-1 items-start justify-center px-4 py-8 sm:items-center">
@@ -105,11 +99,6 @@ export default async function PanelPage() {
             </p>
           )}
           {needsApplicationNumberVerification && <ApplicationNumberForm />}
-          {applicationNumberAlreadyVerified && (
-            <p className="rounded-md bg-muted p-3 text-muted-foreground">
-              Numer wniosku został zweryfikowany.
-            </p>
-          )}
         </CardContent>
       </Card>
     </div>

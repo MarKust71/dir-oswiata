@@ -6,6 +6,8 @@ import { getNotificationEmails } from '@/lib/settings'
 import {
   sendAccountLockedAdminNotification,
   sendAccountLockedUserEmail,
+  sendResultsViewLimitReachedAdminNotification,
+  sendResultsViewLimitReachedUserEmail,
 } from '@/lib/mailer'
 import {
   DB_CONNECTION_ERROR_MESSAGE,
@@ -13,12 +15,26 @@ import {
 } from '@/lib/db-error'
 import { AccountStatus, Role } from '@/generated/prisma/enums'
 
-const MAX_ATTEMPTS = 3
+const MAX_WRONG_ATTEMPTS = 3
+const MAX_RESULT_VIEWS = 3
+
+type ResultDetails = {
+  firstName: string
+  lastName: string
+  pesel: string
+  practicalScore: number
+  theoryScore: number
+  finalScore: number
+  oralScore: number
+  writtenScore: number
+  profession: string
+  applicationNumber: string
+}
 
 export type VerifyApplicationNumberState =
   | { status: 'error'; message: string; attemptsRemaining?: number }
   | { status: 'locked'; message: string }
-  | { status: 'success' }
+  | { status: 'success'; result: ResultDetails; accountLocked: boolean }
   | undefined
 
 // Do porownania bierzemy tylko cyfry i "/" - zeby np. spacje czy myslniki
@@ -40,8 +56,21 @@ export async function verifyApplicationNumberAction(
         id: true,
         email: true,
         applicationNumberAttempts: true,
-        applicationNumberVerifiedAt: true,
-        result: { select: { applicationNumber: true } },
+        resultsViewCount: true,
+        result: {
+          select: {
+            firstName: true,
+            lastName: true,
+            pesel: true,
+            practicalScore: true,
+            theoryScore: true,
+            finalScore: true,
+            oralScore: true,
+            writtenScore: true,
+            profession: true,
+            applicationNumber: true,
+          },
+        },
       },
     })
 
@@ -52,10 +81,6 @@ export async function verifyApplicationNumberAction(
       }
     }
 
-    if (user.applicationNumberVerifiedAt) {
-      return { status: 'success' }
-    }
-
     const inputValue = String(formData.get('applicationNumber') ?? '')
     const normalizedInput = normalizeApplicationNumber(inputValue)
     const normalizedExpected = normalizeApplicationNumber(
@@ -63,17 +88,36 @@ export async function verifyApplicationNumberAction(
     )
 
     if (normalizedInput.length > 0 && normalizedInput === normalizedExpected) {
+      const nextViews = user.resultsViewCount + 1
+      const reachedViewLimit = nextViews >= MAX_RESULT_VIEWS
+
       await prisma.user.update({
         where: { id: user.id },
-        data: { applicationNumberVerifiedAt: new Date() },
+        data: {
+          resultsViewCount: nextViews,
+          ...(reachedViewLimit && { status: AccountStatus.DISABLED }),
+        },
       })
 
-      return { status: 'success' }
+      if (reachedViewLimit) {
+        const notificationEmails = await getNotificationEmails()
+        await sendResultsViewLimitReachedAdminNotification(
+          notificationEmails,
+          user.email
+        )
+        await sendResultsViewLimitReachedUserEmail(user.email)
+      }
+
+      return {
+        status: 'success',
+        result: user.result,
+        accountLocked: reachedViewLimit,
+      }
     }
 
     const nextAttempts = user.applicationNumberAttempts + 1
 
-    if (nextAttempts >= MAX_ATTEMPTS) {
+    if (nextAttempts >= MAX_WRONG_ATTEMPTS) {
       await prisma.user.update({
         where: { id: user.id },
         data: {
@@ -101,7 +145,7 @@ export async function verifyApplicationNumberAction(
     return {
       status: 'error',
       message: 'Nieprawidłowy numer wniosku.',
-      attemptsRemaining: MAX_ATTEMPTS - nextAttempts,
+      attemptsRemaining: MAX_WRONG_ATTEMPTS - nextAttempts,
     }
   } catch (error) {
     if (

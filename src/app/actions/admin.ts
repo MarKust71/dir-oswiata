@@ -79,10 +79,11 @@ export async function setAccountStatusAction(
       data: {
         status: nextStatus,
         // Przy (ponownej) aktywacji dajemy uzytkownikowi swiezy komplet prob
-        // wprowadzenia numeru wniosku - poprzednie zablokowanie zostalo juz
-        // rozwiazane przez administratora.
+        // wprowadzenia numeru wniosku i wyswietlen wynikow - poprzednie
+        // zablokowanie zostalo juz rozwiazane przez administratora.
         ...(nextStatus === AccountStatus.ACTIVE && {
           applicationNumberAttempts: 0,
+          resultsViewCount: 0,
         }),
       },
     })
