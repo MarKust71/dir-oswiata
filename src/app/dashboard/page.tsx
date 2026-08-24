@@ -22,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 
 import { AccountActions } from './account-actions'
+import { ResultDetailsButton } from './result-details'
 
 const STATUS_ORDER: Record<AccountStatus, number> = {
   [AccountStatus.PENDING_APPROVAL]: 0,
@@ -50,10 +51,12 @@ function fullName(user: { firstName: string | null; lastName: string | null }) {
   return name || '—'
 }
 
-function NameWithPhone(user: {
+function NameWithDetails(user: {
   firstName: string | null
   lastName: string | null
   phone: string | null
+  peselPositions: number[]
+  peselDigits: string[]
 }) {
   return (
     <div className="flex flex-col">
@@ -61,25 +64,47 @@ function NameWithPhone(user: {
       {user.phone && (
         <span className="text-xs text-muted-foreground">{user.phone}</span>
       )}
+      {user.peselPositions.length > 0 && (
+        <span className="font-mono text-xs whitespace-nowrap text-muted-foreground">
+          {maskPesel(user.peselPositions, user.peselDigits).join(' ')}
+        </span>
+      )}
     </div>
   )
 }
 
-function PeselMask({
-  positions,
-  digits,
+type ResultSummary = {
+  firstName: string
+  lastName: string
+  pesel: string
+  practicalScore: number
+  theoryScore: number
+  finalScore: number
+  oralScore: number
+  writtenScore: number
+  profession: string
+  applicationNumber: string
+}
+
+function ResultCell({
+  role,
+  result,
 }: {
-  positions: number[]
-  digits: string[]
+  role: Role
+  result: ResultSummary | null
 }) {
-  if (positions.length === 0) {
-    return <span className="text-muted-foreground">—</span>
+  if (role !== Role.STUDENT) return null
+
+  if (result === null) {
+    return <span className="text-sm text-muted-foreground">BRAK</span>
   }
 
   return (
-    <span className="font-mono text-sm whitespace-nowrap">
-      {maskPesel(positions, digits).join(' ')}
-    </span>
+    <ResultDetailsButton
+      label={result.finalScore > 2 ? 'POZYTYWNY' : 'NEGATYWNY'}
+      positive={result.finalScore > 2}
+      result={result}
+    />
   )
 }
 
@@ -98,6 +123,20 @@ export default async function DashboardPage() {
       phone: true,
       peselPositions: true,
       peselDigits: true,
+      result: {
+        select: {
+          firstName: true,
+          lastName: true,
+          pesel: true,
+          practicalScore: true,
+          theoryScore: true,
+          finalScore: true,
+          oralScore: true,
+          writtenScore: true,
+          profession: true,
+          applicationNumber: true,
+        },
+      },
     },
     orderBy: { createdAt: 'desc' },
   })
@@ -132,7 +171,7 @@ export default async function DashboardPage() {
               <TableRow>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Imię i nazwisko</TableHead>
-                <TableHead>PESEL</TableHead>
+                <TableHead>Wynik</TableHead>
                 <TableHead>Rola</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Rejestracja</TableHead>
@@ -148,13 +187,10 @@ export default async function DashboardPage() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.email}</TableCell>
                     <TableCell>
-                      <NameWithPhone {...user} />
+                      <NameWithDetails {...user} />
                     </TableCell>
                     <TableCell>
-                      <PeselMask
-                        positions={user.peselPositions}
-                        digits={user.peselDigits}
-                      />
+                      <ResultCell role={user.role} result={user.result} />
                     </TableCell>
                     <TableCell>{roleLabels[user.role]}</TableCell>
                     <TableCell>
@@ -219,15 +255,22 @@ export default async function DashboardPage() {
                           {user.phone}
                         </span>
                       )}
+                      {user.peselPositions.length > 0 && (
+                        <span className="block font-mono text-xs font-normal whitespace-nowrap text-muted-foreground">
+                          {maskPesel(
+                            user.peselPositions,
+                            user.peselDigits
+                          ).join(' ')}
+                        </span>
+                      )}
                     </span>
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">PESEL</span>
-                    <PeselMask
-                      positions={user.peselPositions}
-                      digits={user.peselDigits}
-                    />
-                  </div>
+                  {user.role === Role.STUDENT && (
+                    <div className="flex justify-between gap-4">
+                      <span className="text-muted-foreground">Wynik</span>
+                      <ResultCell role={user.role} result={user.result} />
+                    </div>
+                  )}
                 </div>
                 <AccountActions
                   userId={user.id}
