@@ -76,7 +76,7 @@ export async function SiteHeader() {
           href="tel:+48713448691"
           className="hover:text-foreground hover:underline"
         >
-          tel. +48 71 3448691
+          tel. +48 71 3448691 w. 43
         </a>
       </div>
     </header>
