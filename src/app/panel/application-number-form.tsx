@@ -53,7 +53,6 @@ export function ApplicationNumberForm() {
           <span className="block">
             {result.lastName}, {result.firstName}
           </span>
-          <span className="block font-mono">{result.pesel}</span>
           <span className="block text-muted-foreground">
             {result.profession} · nr wniosku {result.applicationNumber}
           </span>
