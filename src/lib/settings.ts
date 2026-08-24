@@ -26,6 +26,21 @@ export function getResultsVisibleUntil() {
   return getSettingDate(RESULTS_VISIBLE_UNTIL_KEY)
 }
 
+export async function setResultsVisibilityWindow(from: Date, until: Date) {
+  await prisma.$transaction([
+    prisma.settings.upsert({
+      where: { key: RESULTS_VISIBLE_FROM_KEY },
+      create: { key: RESULTS_VISIBLE_FROM_KEY, value: from.toISOString() },
+      update: { value: from.toISOString() },
+    }),
+    prisma.settings.upsert({
+      where: { key: RESULTS_VISIBLE_UNTIL_KEY },
+      create: { key: RESULTS_VISIBLE_UNTIL_KEY, value: until.toISOString() },
+      update: { value: until.toISOString() },
+    }),
+  ])
+}
+
 export async function getNotificationEmails(): Promise<string[]> {
   const row = await prisma.settings.findUnique({
     where: { key: NOTIFICATION_EMAILS_KEY },

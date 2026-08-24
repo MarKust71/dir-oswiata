@@ -1,5 +1,10 @@
 import { requireRole } from '@/lib/dal'
-import { getNotificationEmails } from '@/lib/settings'
+import {
+  getNotificationEmails,
+  getResultsVisibleFrom,
+  getResultsVisibleUntil,
+} from '@/lib/settings'
+import { toWarsawLocalDateTimeInputValue } from '@/lib/warsaw-time'
 import { Role } from '@/generated/prisma/enums'
 import {
   Card,
@@ -11,11 +16,16 @@ import {
 
 import { NotificationEmailsForm } from './notification-emails-form'
 import { ImportResultsForm } from './import-results-form'
+import { ResultsWindowForm } from './results-window-form'
 
 export default async function SettingsPage() {
   await requireRole([Role.ADMIN])
 
   const emails = await getNotificationEmails()
+  const [resultsVisibleFrom, resultsVisibleUntil] = await Promise.all([
+    getResultsVisibleFrom(),
+    getResultsVisibleUntil(),
+  ])
 
   return (
     <div className="flex flex-col gap-6">
@@ -39,6 +49,32 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <NotificationEmailsForm initialEmails={emails} />
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Okres udostępnienia wyników
+          </CardTitle>
+          <CardDescription>
+            Studenci zobaczą swoje wyniki dopiero po nadejściu daty początkowej.
+            Wartości podawane są w czasie lokalnym Warszawy.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResultsWindowForm
+            initialFrom={
+              resultsVisibleFrom
+                ? toWarsawLocalDateTimeInputValue(resultsVisibleFrom)
+                : ''
+            }
+            initialUntil={
+              resultsVisibleUntil
+                ? toWarsawLocalDateTimeInputValue(resultsVisibleUntil)
+                : ''
+            }
+          />
         </CardContent>
       </Card>
 
