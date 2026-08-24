@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card'
 
 import { NotificationEmailsForm } from './notification-emails-form'
+import { ImportResultsForm } from './import-results-form'
 
 export default async function SettingsPage() {
   await requireRole([Role.ADMIN])
@@ -38,6 +39,20 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <NotificationEmailsForm initialEmails={emails} />
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle className="text-base">Import wyników egzaminów</CardTitle>
+          <CardDescription>
+            Wgraj plik .xlsx z wynikami. Pierwszy wiersz arkusza musi zawierać
+            nagłówki: Praktyka, Teoria, Końcowa, Ocena ustna, Ocena pisemna,
+            zawód, Imię, Nazwisko, Pesel, Nr wniosku.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ImportResultsForm />
         </CardContent>
       </Card>
     </div>
