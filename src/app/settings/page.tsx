@@ -1,5 +1,7 @@
 import { requireRole } from '@/lib/dal'
 import {
+  getMaxApplicationNumberAttempts,
+  getMaxResultsViewCount,
   getNotificationEmails,
   getResultsVisibleFrom,
   getResultsVisibleUntil,
@@ -17,14 +19,22 @@ import {
 import { NotificationEmailsForm } from './notification-emails-form'
 import { ImportResultsForm } from './import-results-form'
 import { ResultsWindowForm } from './results-window-form'
+import { ResultsLimitsForm } from './results-limits-form'
 
 export default async function SettingsPage() {
   await requireRole([Role.ADMIN])
 
   const emails = await getNotificationEmails()
-  const [resultsVisibleFrom, resultsVisibleUntil] = await Promise.all([
+  const [
+    resultsVisibleFrom,
+    resultsVisibleUntil,
+    maxApplicationNumberAttempts,
+    maxResultsViewCount,
+  ] = await Promise.all([
     getResultsVisibleFrom(),
     getResultsVisibleUntil(),
+    getMaxApplicationNumberAttempts(),
+    getMaxResultsViewCount(),
   ])
 
   return (
@@ -74,6 +84,26 @@ export default async function SettingsPage() {
                 ? toWarsawLocalDateTimeInputValue(resultsVisibleUntil)
                 : ''
             }
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Limity weryfikacji numeru wniosku
+          </CardTitle>
+          <CardDescription>
+            Po przekroczeniu któregokolwiek z limitów konto studenta zostaje
+            zablokowane.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResultsLimitsForm
+            initialMaxApplicationNumberAttempts={String(
+              maxApplicationNumberAttempts
+            )}
+            initialMaxResultsViewCount={String(maxResultsViewCount)}
           />
         </CardContent>
       </Card>

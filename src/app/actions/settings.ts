@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireRole } from '@/lib/dal'
 import {
   setNotificationEmails,
+  setResultsLimits,
   setResultsVisibilityWindow,
 } from '@/lib/settings'
 import { NotificationEmailSchema } from '@/lib/validation'
@@ -80,6 +81,45 @@ export async function updateResultsWindowAction(
     revalidatePath('/panel')
 
     return { message: 'Zapisano okres udostępnienia wyników.' }
+  } catch (error) {
+    if (
+      isDatabaseConnectionError(error) ||
+      (error instanceof Error && error.message === DB_CONNECTION_ERROR_MESSAGE)
+    ) {
+      return { error: DB_CONNECTION_ERROR_MESSAGE }
+    }
+    throw error
+  }
+}
+
+function parsePositiveInt(value: FormDataEntryValue | null): number | null {
+  const parsed = Number(String(value ?? '').trim())
+
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+}
+
+export async function updateResultsLimitsAction(
+  _state: SettingsActionState,
+  formData: FormData
+): Promise<SettingsActionState> {
+  try {
+    await requireRole([Role.ADMIN])
+
+    const maxApplicationNumberAttempts = parsePositiveInt(
+      formData.get('maxApplicationNumberAttempts')
+    )
+    const maxResultsViewCount = parsePositiveInt(
+      formData.get('maxResultsViewCount')
+    )
+
+    if (maxApplicationNumberAttempts === null || maxResultsViewCount === null) {
+      return { error: 'Podaj dodatnie liczby całkowite dla obu limitów.' }
+    }
+
+    await setResultsLimits(maxApplicationNumberAttempts, maxResultsViewCount)
+    revalidatePath('/settings')
+
+    return { message: 'Zapisano limity.' }
   } catch (error) {
     if (
       isDatabaseConnectionError(error) ||

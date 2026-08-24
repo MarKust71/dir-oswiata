@@ -45,6 +45,65 @@ export async function setResultsVisibilityWindow(from: Date, until: Date) {
   ])
 }
 
+// Limity dotyczące weryfikacji numeru wniosku i wyświetlania wyników przez
+// studenta - zob. src/app/actions/verify-application-number.ts.
+export const MAX_APPLICATION_NUMBER_ATTEMPTS_KEY =
+  'max_application_number_attempts'
+export const MAX_RESULTS_VIEW_COUNT_KEY = 'max_results_view_count'
+
+const DEFAULT_MAX_APPLICATION_NUMBER_ATTEMPTS = 3
+const DEFAULT_MAX_RESULTS_VIEW_COUNT = 3
+
+async function getSettingPositiveInt(
+  key: string,
+  fallback: number
+): Promise<number> {
+  const row = await prisma.settings.findUnique({ where: { key } })
+  if (!row) return fallback
+
+  const value = Number(row.value)
+
+  return Number.isInteger(value) && value > 0 ? value : fallback
+}
+
+export function getMaxApplicationNumberAttempts() {
+  return getSettingPositiveInt(
+    MAX_APPLICATION_NUMBER_ATTEMPTS_KEY,
+    DEFAULT_MAX_APPLICATION_NUMBER_ATTEMPTS
+  )
+}
+
+export function getMaxResultsViewCount() {
+  return getSettingPositiveInt(
+    MAX_RESULTS_VIEW_COUNT_KEY,
+    DEFAULT_MAX_RESULTS_VIEW_COUNT
+  )
+}
+
+export async function setResultsLimits(
+  maxApplicationNumberAttempts: number,
+  maxResultsViewCount: number
+) {
+  await prisma.$transaction([
+    prisma.settings.upsert({
+      where: { key: MAX_APPLICATION_NUMBER_ATTEMPTS_KEY },
+      create: {
+        key: MAX_APPLICATION_NUMBER_ATTEMPTS_KEY,
+        value: String(maxApplicationNumberAttempts),
+      },
+      update: { value: String(maxApplicationNumberAttempts) },
+    }),
+    prisma.settings.upsert({
+      where: { key: MAX_RESULTS_VIEW_COUNT_KEY },
+      create: {
+        key: MAX_RESULTS_VIEW_COUNT_KEY,
+        value: String(maxResultsViewCount),
+      },
+      update: { value: String(maxResultsViewCount) },
+    }),
+  ])
+}
+
 export async function getNotificationEmails(): Promise<string[]> {
   const row = await prisma.settings.findUnique({
     where: { key: NOTIFICATION_EMAILS_KEY },

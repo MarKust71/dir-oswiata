@@ -2,7 +2,11 @@
 
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
-import { getNotificationEmails } from '@/lib/settings'
+import {
+  getMaxApplicationNumberAttempts,
+  getMaxResultsViewCount,
+  getNotificationEmails,
+} from '@/lib/settings'
 import {
   sendAccountLockedAdminNotification,
   sendAccountLockedUserEmail,
@@ -14,9 +18,6 @@ import {
   isDatabaseConnectionError,
 } from '@/lib/db-error'
 import { AccountStatus, Role } from '@/generated/prisma/enums'
-
-const MAX_WRONG_ATTEMPTS = 3
-const MAX_RESULT_VIEWS = 3
 
 type ResultDetails = {
   firstName: string
@@ -49,6 +50,11 @@ export async function verifyApplicationNumberAction(
 ): Promise<VerifyApplicationNumberState> {
   try {
     const actor = await requireRole([Role.STUDENT])
+
+    const [maxAttempts, maxViews] = await Promise.all([
+      getMaxApplicationNumberAttempts(),
+      getMaxResultsViewCount(),
+    ])
 
     const user = await prisma.user.findUnique({
       where: { id: actor.id },
@@ -89,7 +95,7 @@ export async function verifyApplicationNumberAction(
 
     if (normalizedInput.length > 0 && normalizedInput === normalizedExpected) {
       const nextViews = user.resultsViewCount + 1
-      const reachedViewLimit = nextViews >= MAX_RESULT_VIEWS
+      const reachedViewLimit = nextViews >= maxViews
 
       await prisma.user.update({
         where: { id: user.id },
@@ -117,7 +123,7 @@ export async function verifyApplicationNumberAction(
 
     const nextAttempts = user.applicationNumberAttempts + 1
 
-    if (nextAttempts >= MAX_WRONG_ATTEMPTS) {
+    if (nextAttempts >= maxAttempts) {
       await prisma.user.update({
         where: { id: user.id },
         data: {
@@ -145,7 +151,7 @@ export async function verifyApplicationNumberAction(
     return {
       status: 'error',
       message: 'Nieprawidłowy numer wniosku.',
-      attemptsRemaining: MAX_WRONG_ATTEMPTS - nextAttempts,
+      attemptsRemaining: maxAttempts - nextAttempts,
     }
   } catch (error) {
     if (
