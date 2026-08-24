@@ -11,6 +11,9 @@ import {
 import { cn } from '@/lib/utils'
 
 type ResultDetails = {
+  firstName: string
+  lastName: string
+  pesel: string
   practicalScore: number
   theoryScore: number
   finalScore: number
@@ -52,7 +55,13 @@ export function ResultDetailsButton({
         <DialogHeader>
           <DialogTitle>Szczegóły wyniku egzaminu</DialogTitle>
           <DialogDescription>
-            {result.profession} · nr wniosku {result.applicationNumber}
+            <span className="block">
+              {result.lastName}, {result.firstName}
+            </span>
+            <span className="block font-mono">{result.pesel}</span>
+            <span className="block">
+              {result.profession} · nr wniosku {result.applicationNumber}
+            </span>
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col text-sm">

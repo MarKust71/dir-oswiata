@@ -74,6 +74,9 @@ function NameWithDetails(user: {
 }
 
 type ResultSummary = {
+  firstName: string
+  lastName: string
+  pesel: string
   practicalScore: number
   theoryScore: number
   finalScore: number
@@ -122,6 +125,9 @@ export default async function DashboardPage() {
       peselDigits: true,
       result: {
         select: {
+          firstName: true,
+          lastName: true,
+          pesel: true,
           practicalScore: true,
           theoryScore: true,
           finalScore: true,
