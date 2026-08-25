@@ -116,14 +116,14 @@ export default async function PanelPage() {
                 }
               >
                 {user.resultId !== null
-                  ? 'Twoje wyniki są dostępne'
-                  : 'Twoje wyniki nie są jeszcze dostępne'}
+                  ? 'Twoje wyniki czekają na udostępnienie'
+                  : 'Twoje wyniki nie są jeszcze przygotowane'}
               </p>
             </>
           )}
           {resultsNotYetAvailable && (
             <p className="font-medium text-destructive">
-              Twoje wyniki nie są jeszcze dostępne. Powiadomiliśmy o tym
+              Twoje wyniki nie są jeszcze przygotowane. Powiadomiliśmy o tym
               administratora.
             </p>
           )}
