@@ -247,6 +247,46 @@ export async function sendResultsViewLimitReachedAdminNotification(
   )
 }
 
+export async function sendMissingResultAdminNotification(
+  adminEmails: string[],
+  userEmail: string
+) {
+  if (adminEmails.length === 0) return
+
+  const text = `Użytkownik "${userEmail}" zalogował się w okresie udostępniania wyników, ale nie znaleziono dla niego wyniku w bazie (dopasowanie po imieniu, nazwisku i numerze PESEL).`
+  const transporter = getTransporter()
+
+  if (!transporter) {
+    console.warn(
+      `[mailer] SMTP nie jest skonfigurowany. Powiadomienie: ${text}`
+    )
+
+    return
+  }
+
+  await Promise.all(
+    adminEmails.map(async (to) => {
+      try {
+        const info = await transporter.sendMail({
+          from: SMTP_FROM || SMTP_USER,
+          to,
+          subject: 'Brak wyniku dla użytkownika',
+          text,
+        })
+
+        console.log(
+          `[mailer] Wysłano powiadomienie o braku wyniku do ${to} (messageId: ${info.messageId}, response: ${info.response})`
+        )
+      } catch (error) {
+        console.error(
+          `[mailer] Nie udało się wysłać powiadomienia o braku wyniku do ${to}:`,
+          error
+        )
+      }
+    })
+  )
+}
+
 export async function sendResultsViewLimitReachedUserEmail(email: string) {
   const text = `Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.\n\n${CONTACT_EMAIL}, ${CONTACT_PHONE_DISPLAY}`
   const transporter = getTransporter()

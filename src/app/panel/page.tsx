@@ -1,6 +1,7 @@
 import { requireUser } from '@/lib/dal'
 import { roleLabels } from '@/lib/labels'
 import { getResultsVisibleFrom, getResultsVisibleUntil } from '@/lib/settings'
+import { notifyMissingResultIfNeeded } from '@/lib/missing-result-notification'
 import { Role } from '@/generated/prisma/enums'
 import { PeselBoxes } from '@/components/pesel-boxes'
 import {
@@ -53,6 +54,15 @@ export default async function PanelPage() {
   )
   const needsApplicationNumberVerification =
     isWithinResultsWindow && user.resultId !== null
+  const resultsNotYetAvailable = isWithinResultsWindow && user.resultId === null
+
+  if (resultsNotYetAvailable) {
+    await notifyMissingResultIfNeeded({
+      id: user.id,
+      email: user.email,
+      missingResultNotifiedAt: user.missingResultNotifiedAt,
+    })
+  }
 
   return (
     <div className="flex flex-1 items-start justify-center px-4 py-8 sm:items-center">
@@ -110,6 +120,12 @@ export default async function PanelPage() {
                   : 'Twoje wyniki nie są jeszcze dostępne'}
               </p>
             </>
+          )}
+          {resultsNotYetAvailable && (
+            <p className="font-medium text-destructive">
+              Twoje wyniki nie są jeszcze dostępne. Powiadomiliśmy o tym
+              administratora.
+            </p>
           )}
           {needsApplicationNumberVerification && <ApplicationNumberForm />}
         </CardContent>
