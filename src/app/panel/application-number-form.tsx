@@ -58,8 +58,6 @@ export function ApplicationNumberForm() {
           </span>
         </div>
         <div className="flex flex-col">
-          <DetailRow label="Ocena ustna" value={result.oralScore} />
-          <DetailRow label="Ocena pisemna" value={result.writtenScore} />
           <DetailRow label="Wynik teoretyczny" value={result.theoryScore} />
           <DetailRow label="Wynik praktyczny" value={result.practicalScore} />
           <DetailRow label="Wynik końcowy" value={result.finalScore} />
