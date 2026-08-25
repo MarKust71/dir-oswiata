@@ -94,9 +94,22 @@ export default async function PanelPage() {
             />
           </div>
           {isBeforeResultsWindow && resultsVisibleFrom && (
-            <p className="rounded-md bg-muted p-3 text-muted-foreground">
-              {formatResultsAvailabilityMessage(resultsVisibleFrom)}
-            </p>
+            <>
+              <p className="rounded-md bg-muted p-3 text-muted-foreground">
+                {formatResultsAvailabilityMessage(resultsVisibleFrom)}
+              </p>
+              <p
+                className={
+                  user.resultId !== null
+                    ? 'font-medium text-green-600 dark:text-green-400'
+                    : 'font-medium text-destructive'
+                }
+              >
+                {user.resultId !== null
+                  ? 'Twoje wyniki są dostępne'
+                  : 'Twoje wyniki nie są jeszcze dostępne'}
+              </p>
+            </>
           )}
           {needsApplicationNumberVerification && <ApplicationNumberForm />}
         </CardContent>
