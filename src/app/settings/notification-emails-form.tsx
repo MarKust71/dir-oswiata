@@ -18,7 +18,7 @@ export function NotificationEmailsForm({
   )
 
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <form action={action} className="flex flex-1 flex-col gap-3">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="emails">Adresy e-mail (po jednym w linii)</Label>
         <Textarea
@@ -30,16 +30,18 @@ export function NotificationEmailsForm({
         />
       </div>
 
-      {state?.error && (
-        <p className="text-sm text-destructive">{state.error}</p>
-      )}
-      {state?.message && (
-        <p className="text-sm text-muted-foreground">{state.message}</p>
-      )}
+      <div className="mt-auto flex flex-col gap-3">
+        {state?.error && (
+          <p className="text-sm text-destructive">{state.error}</p>
+        )}
+        {state?.message && (
+          <p className="text-sm text-muted-foreground">{state.message}</p>
+        )}
 
-      <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? 'Zapisywanie...' : 'Zapisz'}
-      </Button>
+        <Button type="submit" disabled={pending} className="w-fit">
+          {pending ? 'Zapisywanie...' : 'Zapisz'}
+        </Button>
+      </div>
     </form>
   )
 }

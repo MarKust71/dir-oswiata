@@ -53,7 +53,11 @@ export function ImportResultsForm() {
 
   return (
     <>
-      <form ref={formRef} action={action} className="flex flex-col gap-3">
+      <form
+        ref={formRef}
+        action={action}
+        className="flex flex-1 flex-col gap-3"
+      >
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="file">Plik z wynikami (.xlsx)</Label>
           <Input id="file" name="file" type="file" accept=".xlsx" required />
@@ -63,7 +67,7 @@ export function ImportResultsForm() {
           type="button"
           onClick={handleTriggerClick}
           disabled={pending}
-          className="w-fit"
+          className="mt-auto w-fit"
         >
           {pending ? 'Importowanie...' : 'Importuj'}
         </Button>
