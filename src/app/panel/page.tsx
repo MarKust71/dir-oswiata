@@ -29,7 +29,7 @@ const availabilityTimeFormatter = new Intl.DateTimeFormat('pl-PL', {
 })
 
 function formatResultsAvailabilityMessage(from: Date) {
-  return `Wyniki zostaną udostępnione ${availabilityDateFormatter.format(from)} r. o godz. ${availabilityTimeFormatter.format(from)}.`
+  return `Wyniki zostaną udostępnione ${availabilityDateFormatter.format(from)} r. o godz. ${availabilityTimeFormatter.format(from)}.`
 }
 
 export default async function PanelPage() {
