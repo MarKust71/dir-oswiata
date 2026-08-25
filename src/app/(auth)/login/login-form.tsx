@@ -12,6 +12,8 @@ export function LoginForm() {
   const [state, action, pending] = useActionState(loginAction, undefined)
   const [resendPending, startResend] = useTransition()
   const [resendMessage, setResendMessage] = useState<string | null>(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
   function handleResend() {
     if (!state?.email) return
@@ -31,6 +33,8 @@ export function LoginForm() {
           type="email"
           autoComplete="email"
           placeholder="jan.kowalski@przyklad.pl"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
         />
         {state?.errors?.email && (
@@ -45,6 +49,8 @@ export function LoginForm() {
           name="password"
           type="password"
           autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           required
         />
         {state?.errors?.password && (
