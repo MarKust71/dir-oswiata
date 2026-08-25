@@ -46,81 +46,85 @@ export default async function SettingsPage() {
         </p>
       </div>
 
-      <Card className="max-w-lg">
-        <CardHeader>
-          <CardTitle className="text-base">
-            Adresy e-mail do powiadomień
-          </CardTitle>
-          <CardDescription>
-            Po każdym potwierdzeniu adresu e-mail przez nowego użytkownika, na
-            poniższe adresy zostanie wysłane powiadomienie o oczekującym na
-            akceptację koncie.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <NotificationEmailsForm initialEmails={emails} />
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Adresy e-mail do powiadomień
+            </CardTitle>
+            <CardDescription>
+              Po każdym potwierdzeniu adresu e-mail przez nowego użytkownika, na
+              poniższe adresy zostanie wysłane powiadomienie o oczekującym na
+              akceptację koncie.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col">
+            <NotificationEmailsForm initialEmails={emails} />
+          </CardContent>
+        </Card>
 
-      <Card className="max-w-lg">
-        <CardHeader>
-          <CardTitle className="text-base">
-            Okres udostępnienia wyników
-          </CardTitle>
-          <CardDescription>
-            Studenci zobaczą swoje wyniki dopiero po nadejściu daty początkowej.
-            Wartości podawane są w czasie lokalnym Warszawy.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResultsWindowForm
-            initialFrom={
-              resultsVisibleFrom
-                ? toWarsawLocalDateTimeInputValue(resultsVisibleFrom)
-                : ''
-            }
-            initialUntil={
-              resultsVisibleUntil
-                ? toWarsawLocalDateTimeInputValue(resultsVisibleUntil)
-                : ''
-            }
-          />
-        </CardContent>
-      </Card>
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Okres udostępnienia wyników
+            </CardTitle>
+            <CardDescription>
+              Studenci zobaczą swoje wyniki dopiero po nadejściu daty
+              początkowej. Wartości podawane są w czasie lokalnym Warszawy.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col">
+            <ResultsWindowForm
+              initialFrom={
+                resultsVisibleFrom
+                  ? toWarsawLocalDateTimeInputValue(resultsVisibleFrom)
+                  : ''
+              }
+              initialUntil={
+                resultsVisibleUntil
+                  ? toWarsawLocalDateTimeInputValue(resultsVisibleUntil)
+                  : ''
+              }
+            />
+          </CardContent>
+        </Card>
 
-      <Card className="max-w-lg">
-        <CardHeader>
-          <CardTitle className="text-base">
-            Limity weryfikacji numeru wniosku
-          </CardTitle>
-          <CardDescription>
-            Po przekroczeniu któregokolwiek z limitów konto studenta zostaje
-            zablokowane.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResultsLimitsForm
-            initialMaxApplicationNumberAttempts={String(
-              maxApplicationNumberAttempts
-            )}
-            initialMaxResultsViewCount={String(maxResultsViewCount)}
-          />
-        </CardContent>
-      </Card>
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Limity weryfikacji numeru wniosku
+            </CardTitle>
+            <CardDescription>
+              Po przekroczeniu któregokolwiek z limitów konto studenta zostaje
+              zablokowane.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col">
+            <ResultsLimitsForm
+              initialMaxApplicationNumberAttempts={String(
+                maxApplicationNumberAttempts
+              )}
+              initialMaxResultsViewCount={String(maxResultsViewCount)}
+            />
+          </CardContent>
+        </Card>
 
-      <Card className="max-w-lg">
-        <CardHeader>
-          <CardTitle className="text-base">Import wyników egzaminów</CardTitle>
-          <CardDescription>
-            Wgraj plik .xlsx z wynikami. Pierwszy wiersz arkusza musi zawierać
-            nagłówki: Praktyka, Teoria, Końcowa, Ocena ustna, Ocena pisemna,
-            zawód, Imię, Nazwisko, Pesel, Nr wniosku.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ImportResultsForm />
-        </CardContent>
-      </Card>
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Import wyników egzaminów
+            </CardTitle>
+            <CardDescription>
+              Wgraj plik .xlsx z wynikami. Pierwszy wiersz arkusza musi zawierać
+              nagłówki: Praktyka, Teoria, Końcowa, Ocena ustna, Ocena pisemna,
+              zawód, Imię, Nazwisko, Pesel, Nr wniosku.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col">
+            <ImportResultsForm />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
