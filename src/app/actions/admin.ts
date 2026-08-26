@@ -112,6 +112,35 @@ export async function setAccountStatusAction(
   }
 }
 
+export async function deleteAccountAction(
+  userId: string
+): Promise<AdminActionState> {
+  try {
+    const actor = await requireRole([Role.ADMIN, Role.USER])
+
+    if (actor.role !== Role.ADMIN) {
+      return { error: 'Tylko administrator może trwale usunąć konto.' }
+    }
+
+    const target = await loadTarget(userId)
+    if (!target) return { error: 'Nie znaleziono konta.' }
+
+    if (target.id === actor.id) {
+      return { error: 'Nie możesz usunąć własnego konta.' }
+    }
+
+    await prisma.user.delete({ where: { id: target.id } })
+
+    revalidatePath('/dashboard')
+
+    return { message: 'Konto zostało trwale usunięte.' }
+  } catch (error) {
+    const dbErrorState = toDbConnectionErrorState(error)
+    if (dbErrorState) return dbErrorState
+    throw error
+  }
+}
+
 export async function setAccountRoleAction(
   userId: string,
   nextRole: Role
