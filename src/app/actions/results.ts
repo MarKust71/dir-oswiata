@@ -15,6 +15,32 @@ import { Role } from '@/generated/prisma/enums'
 export type ImportResultsActionState =
   { message?: string; error?: string } | undefined
 
+export type RelinkResultsActionState =
+  { message?: string; error?: string } | undefined
+
+export async function relinkResultsAction(
+  _state: RelinkResultsActionState,
+  _formData: FormData
+): Promise<RelinkResultsActionState> {
+  try {
+    await requireRole([Role.ADMIN])
+
+    const { linkedCount, unlinkedCount, unchangedCount } =
+      await relinkAllStudentsToResults()
+
+    revalidatePath('/settings')
+    revalidatePath('/panel')
+
+    return {
+      message: `Zakończono. Nowo powiązane: ${linkedCount}, rozłączone (niepasujące): ${unlinkedCount}, niezmienione poprawne powiązania: ${unchangedCount}.`,
+    }
+  } catch (error) {
+    const dbErrorState = toDbConnectionErrorState(error)
+    if (dbErrorState) return dbErrorState
+    throw error
+  }
+}
+
 type NewResultRow = {
   practicalScore: number
   theoryScore: number
@@ -169,7 +195,10 @@ export async function importResultsAction(
       prisma.results.createMany({ data: rows }),
     ])
 
-    const linkedCount = await relinkAllStudentsToResults()
+    // Wszystkie poprzednie powiązania zostały już wyzerowane kaskadowo przez
+    // ON DELETE SET NULL (import usuwa wszystkie stare rekordy Results), więc
+    // liczą się tylko nowe powiązania.
+    const { linkedCount } = await relinkAllStudentsToResults()
 
     revalidatePath('/settings')
     revalidatePath('/dashboard')
