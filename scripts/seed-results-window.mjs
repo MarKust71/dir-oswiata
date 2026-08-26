@@ -1,5 +1,6 @@
-// Ustawia w tabeli "Settings" granice okresu udostępnienia wyników egzaminu
-// studentom (klucze results_visible_from / results_visible_until).
+// Ustawia w tabeli "Settings" komplet kluczy konfiguracyjnych aplikacji (okres
+// udostepnienia wynikow, limity weryfikacji numeru wniosku, czas automatycznego
+// wylogowania, adresy e-mail do powiadomien) - zob. src/lib/settings.ts.
 //
 // Uzycie:
 //   DATABASE_URL="postgresql://..." node scripts/seed-results-window.mjs
@@ -17,24 +18,33 @@ if (!process.env.DATABASE_URL) {
   process.exit(1)
 }
 
-const RESULTS_VISIBLE_FROM = '2026-08-31T07:00:00+02:00'
-const RESULTS_VISIBLE_UNTIL = '2026-09-07T23:59:59+02:00'
+const SETTINGS = {
+  results_visible_from: '2026-08-31T07:00:00+02:00',
+  results_visible_until: '2026-09-15T00:00:00+02:00',
+  max_application_number_attempts: '3',
+  max_results_view_count: '3',
+  inactivity_timeout_seconds: '900',
+  // Celowo pusta - zeby seedowana baza nie wysylala powiadomien na prawdziwe adresy.
+  emails_for_notifications: '[]',
+}
 
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL })
 await client.connect()
 
+const keys = Object.keys(SETTINGS)
+const values = Object.values(SETTINGS)
+const placeholders = keys
+  .map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`)
+  .join(', ')
+
 await client.query(
-  `INSERT INTO "Settings" (key, value) VALUES ($1, $2), ($3, $4)
+  `INSERT INTO "Settings" (key, value) VALUES ${placeholders}
    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-  [
-    'results_visible_from',
-    RESULTS_VISIBLE_FROM,
-    'results_visible_until',
-    RESULTS_VISIBLE_UNTIL,
-  ]
+  keys.flatMap((key, i) => [key, values[i]])
 )
 
-console.log(
-  `Ustawiono okres udostępnienia wyników: ${RESULTS_VISIBLE_FROM} - ${RESULTS_VISIBLE_UNTIL}`
-)
+console.log('Ustawiono klucze konfiguracyjne:')
+for (const [key, value] of Object.entries(SETTINGS)) {
+  console.log(`  ${key} = ${value}`)
+}
 await client.end()
