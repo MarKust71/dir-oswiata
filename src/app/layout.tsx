@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 
 import './globals.css'
 import { getCurrentUser } from '@/lib/dal'
+import { getInactivityTimeoutSeconds } from '@/lib/settings'
 import { SiteHeader } from '@/components/site-header'
 import { InactivityLogout } from '@/components/inactivity-logout'
 import { Toaster } from '@/components/ui/sonner'
@@ -24,6 +25,9 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
   const user = await getCurrentUser()
+  const inactivityTimeoutSeconds = user
+    ? await getInactivityTimeoutSeconds()
+    : null
 
   return (
     <html
@@ -34,7 +38,9 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
         <SiteHeader />
         <div className="flex flex-1 flex-col">{children}</div>
         <Toaster />
-        {user && <InactivityLogout />}
+        {user && inactivityTimeoutSeconds && (
+          <InactivityLogout timeoutSeconds={inactivityTimeoutSeconds} />
+        )}
       </body>
     </html>
   )

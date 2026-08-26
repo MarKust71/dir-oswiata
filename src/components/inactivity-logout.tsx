@@ -4,8 +4,6 @@ import { useEffect, useRef } from 'react'
 
 import { logoutForInactivityAction } from '@/app/actions/auth'
 
-const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000
-
 const ACTIVITY_EVENTS = [
   'mousedown',
   'mousemove',
@@ -14,7 +12,11 @@ const ACTIVITY_EVENTS = [
   'touchstart',
 ] as const
 
-export function InactivityLogout() {
+export function InactivityLogout({
+  timeoutSeconds,
+}: {
+  timeoutSeconds: number
+}) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export function InactivityLogout() {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
       timeoutRef.current = setTimeout(() => {
         void logoutForInactivityAction()
-      }, INACTIVITY_TIMEOUT_MS)
+      }, timeoutSeconds * 1000)
     }
 
     resetTimer()
@@ -36,7 +38,7 @@ export function InactivityLogout() {
         window.removeEventListener(event, resetTimer)
       }
     }
-  }, [])
+  }, [timeoutSeconds])
 
   return null
 }

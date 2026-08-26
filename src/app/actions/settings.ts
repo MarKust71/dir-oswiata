@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { requireRole } from '@/lib/dal'
 import {
+  setInactivityTimeoutSeconds,
   setNotificationEmails,
   setResultsLimits,
   setResultsVisibilityWindow,
@@ -120,6 +121,36 @@ export async function updateResultsLimitsAction(
     revalidatePath('/settings')
 
     return { message: 'Zapisano limity.' }
+  } catch (error) {
+    if (
+      isDatabaseConnectionError(error) ||
+      (error instanceof Error && error.message === DB_CONNECTION_ERROR_MESSAGE)
+    ) {
+      return { error: DB_CONNECTION_ERROR_MESSAGE }
+    }
+    throw error
+  }
+}
+
+export async function updateInactivityTimeoutAction(
+  _state: SettingsActionState,
+  formData: FormData
+): Promise<SettingsActionState> {
+  try {
+    await requireRole([Role.ADMIN])
+
+    const inactivityTimeoutSeconds = parsePositiveInt(
+      formData.get('inactivityTimeoutSeconds')
+    )
+
+    if (inactivityTimeoutSeconds === null) {
+      return { error: 'Podaj dodatnią liczbę całkowitą sekund.' }
+    }
+
+    await setInactivityTimeoutSeconds(inactivityTimeoutSeconds)
+    revalidatePath('/settings')
+
+    return { message: 'Zapisano czas automatycznego wylogowania.' }
   } catch (error) {
     if (
       isDatabaseConnectionError(error) ||
