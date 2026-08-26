@@ -1,5 +1,6 @@
 import { requireRole } from '@/lib/dal'
 import {
+  getInactivityTimeoutSeconds,
   getMaxApplicationNumberAttempts,
   getMaxResultsViewCount,
   getNotificationEmails,
@@ -21,6 +22,7 @@ import { ImportResultsForm } from './import-results-form'
 import { ResultsWindowForm } from './results-window-form'
 import { ResultsLimitsForm } from './results-limits-form'
 import { RelinkResultsForm } from './relink-results-form'
+import { InactivityTimeoutForm } from './inactivity-timeout-form'
 
 export default async function SettingsPage() {
   await requireRole([Role.ADMIN])
@@ -31,11 +33,13 @@ export default async function SettingsPage() {
     resultsVisibleUntil,
     maxApplicationNumberAttempts,
     maxResultsViewCount,
+    inactivityTimeoutSeconds,
   ] = await Promise.all([
     getResultsVisibleFrom(),
     getResultsVisibleUntil(),
     getMaxApplicationNumberAttempts(),
     getMaxResultsViewCount(),
+    getInactivityTimeoutSeconds(),
   ])
 
   return (
@@ -141,6 +145,23 @@ export default async function SettingsPage() {
           </CardHeader>
           <CardContent className="flex flex-1 flex-col">
             <RelinkResultsForm />
+          </CardContent>
+        </Card>
+
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Automatyczne wylogowanie
+            </CardTitle>
+            <CardDescription>
+              Po tym czasie braku aktywności użytkownik zostanie automatycznie
+              wylogowany ze względów bezpieczeństwa.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col">
+            <InactivityTimeoutForm
+              initialSeconds={String(inactivityTimeoutSeconds)}
+            />
           </CardContent>
         </Card>
       </div>

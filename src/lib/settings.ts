@@ -80,6 +80,27 @@ export function getMaxResultsViewCount() {
   )
 }
 
+// Czas braku aktywności, po którym użytkownik jest automatycznie wylogowywany -
+// zob. src/components/inactivity-logout.tsx.
+export const INACTIVITY_TIMEOUT_SECONDS_KEY = 'inactivity_timeout_seconds'
+
+const DEFAULT_INACTIVITY_TIMEOUT_SECONDS = 15 * 60
+
+export function getInactivityTimeoutSeconds() {
+  return getSettingPositiveInt(
+    INACTIVITY_TIMEOUT_SECONDS_KEY,
+    DEFAULT_INACTIVITY_TIMEOUT_SECONDS
+  )
+}
+
+export async function setInactivityTimeoutSeconds(seconds: number) {
+  await prisma.settings.upsert({
+    where: { key: INACTIVITY_TIMEOUT_SECONDS_KEY },
+    create: { key: INACTIVITY_TIMEOUT_SECONDS_KEY, value: String(seconds) },
+    update: { value: String(seconds) },
+  })
+}
+
 export async function setResultsLimits(
   maxApplicationNumberAttempts: number,
   maxResultsViewCount: number
