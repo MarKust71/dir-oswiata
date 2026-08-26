@@ -23,9 +23,9 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { ResultDetailsButton } from '@/components/result-details'
 
 import { AccountActions } from './account-actions'
-import { ResultDetailsButton } from './result-details'
 
 const STATUS_BADGE_VARIANT: Record<
   AccountStatus,

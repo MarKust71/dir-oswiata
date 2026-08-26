@@ -34,6 +34,14 @@ export async function SiteHeader() {
 
         {user ? (
           <div className="flex items-center gap-3">
+            {(user.role === Role.ADMIN || user.role === Role.USER) && (
+              <Link
+                href="/results"
+                className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+              >
+                Wyniki
+              </Link>
+            )}
             {user.role === Role.ADMIN && (
               <Link
                 href="/settings"
