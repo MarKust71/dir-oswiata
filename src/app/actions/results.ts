@@ -15,6 +15,31 @@ import { Role } from '@/generated/prisma/enums'
 export type ImportResultsActionState =
   { message?: string; error?: string } | undefined
 
+export type RelinkResultsActionState =
+  { message?: string; error?: string } | undefined
+
+export async function relinkResultsAction(
+  _state: RelinkResultsActionState,
+  _formData: FormData
+): Promise<RelinkResultsActionState> {
+  try {
+    await requireRole([Role.ADMIN])
+
+    const linkedCount = await relinkAllStudentsToResults()
+
+    revalidatePath('/settings')
+    revalidatePath('/panel')
+
+    return {
+      message: `Zakończono. Powiązano ${linkedCount} kont uczniów z wynikami.`,
+    }
+  } catch (error) {
+    const dbErrorState = toDbConnectionErrorState(error)
+    if (dbErrorState) return dbErrorState
+    throw error
+  }
+}
+
 type NewResultRow = {
   practicalScore: number
   theoryScore: number

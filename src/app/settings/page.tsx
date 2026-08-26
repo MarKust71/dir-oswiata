@@ -20,6 +20,7 @@ import { NotificationEmailsForm } from './notification-emails-form'
 import { ImportResultsForm } from './import-results-form'
 import { ResultsWindowForm } from './results-window-form'
 import { ResultsLimitsForm } from './results-limits-form'
+import { RelinkResultsForm } from './relink-results-form'
 
 export default async function SettingsPage() {
   await requireRole([Role.ADMIN])
@@ -122,6 +123,24 @@ export default async function SettingsPage() {
           </CardHeader>
           <CardContent className="flex flex-1 flex-col">
             <ImportResultsForm />
+          </CardContent>
+        </Card>
+
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Dopasowywanie kont do wyników
+            </CardTitle>
+            <CardDescription>
+              Ponownie spróbuj powiązać konta uczniów bez przypisanego wyniku z
+              rekordami w tabeli wyników (po imieniu, nazwisku i numerze PESEL).
+              Ta operacja jest wykonywana automatycznie przy aktywacji konta i
+              po imporcie wyników - użyj tego przycisku, aby uruchomić ją
+              ręcznie.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col">
+            <RelinkResultsForm />
           </CardContent>
         </Card>
       </div>
