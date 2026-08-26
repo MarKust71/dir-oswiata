@@ -25,13 +25,14 @@ export async function relinkResultsAction(
   try {
     await requireRole([Role.ADMIN])
 
-    const linkedCount = await relinkAllStudentsToResults()
+    const { linkedCount, unlinkedCount, unchangedCount } =
+      await relinkAllStudentsToResults()
 
     revalidatePath('/settings')
     revalidatePath('/panel')
 
     return {
-      message: `Zakończono. Powiązano ${linkedCount} kont uczniów z wynikami.`,
+      message: `Zakończono. Nowo powiązane: ${linkedCount}, rozłączone (niepasujące): ${unlinkedCount}, niezmienione poprawne powiązania: ${unchangedCount}.`,
     }
   } catch (error) {
     const dbErrorState = toDbConnectionErrorState(error)
@@ -194,7 +195,10 @@ export async function importResultsAction(
       prisma.results.createMany({ data: rows }),
     ])
 
-    const linkedCount = await relinkAllStudentsToResults()
+    // Wszystkie poprzednie powiązania zostały już wyzerowane kaskadowo przez
+    // ON DELETE SET NULL (import usuwa wszystkie stare rekordy Results), więc
+    // liczą się tylko nowe powiązania.
+    const { linkedCount } = await relinkAllStudentsToResults()
 
     revalidatePath('/settings')
     revalidatePath('/dashboard')
