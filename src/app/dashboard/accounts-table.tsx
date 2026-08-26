@@ -197,9 +197,11 @@ export function AccountsTable({
                     <TableCell>
                       <AccountActions
                         userId={user.id}
+                        email={user.email}
                         role={user.role}
                         status={user.status}
                         canManage={canManage}
+                        canDelete={canManage && actorRole === Role.ADMIN}
                         assignableRoles={assignableRoles}
                         layout="compact"
                       />
@@ -267,9 +269,11 @@ export function AccountsTable({
                 </div>
                 <AccountActions
                   userId={user.id}
+                  email={user.email}
                   role={user.role}
                   status={user.status}
                   canManage={canManage}
+                  canDelete={canManage && actorRole === Role.ADMIN}
                   assignableRoles={assignableRoles}
                 />
               </CardContent>

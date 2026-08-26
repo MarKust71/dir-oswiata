@@ -1,13 +1,24 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import {
+  deleteAccountAction,
   setAccountRoleAction,
   setAccountStatusAction,
 } from '@/app/actions/admin'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   Select,
   SelectContent,
@@ -21,9 +32,11 @@ import { AccountStatus, Role } from '@/generated/prisma/enums'
 
 type AccountActionsProps = {
   userId: string
+  email: string
   role: Role
   status: AccountStatus
   canManage: boolean
+  canDelete: boolean
   assignableRoles: Role[]
   // "compact" ustawia kontrolki jedna pod druga, żeby nie poszerzać kolumny
   // w tabeli desktopowej; "wide" (domyślnie) układa je obok siebie - używane
@@ -33,13 +46,16 @@ type AccountActionsProps = {
 
 export function AccountActions({
   userId,
+  email,
   role,
   status,
   canManage,
+  canDelete,
   assignableRoles,
   layout = 'wide',
 }: AccountActionsProps) {
   const [pending, startTransition] = useTransition()
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   function handleStatus(
     next: typeof AccountStatus.ACTIVE | typeof AccountStatus.DISABLED
@@ -60,61 +76,99 @@ export function AccountActions({
     })
   }
 
+  function handleDelete() {
+    setConfirmOpen(false)
+    startTransition(async () => {
+      const res = await deleteAccountAction(userId)
+      if (res?.error) toast.error(res.error)
+      else if (res?.message) toast.success(res.message)
+    })
+  }
+
   if (!canManage) {
     return <span className="text-sm text-muted-foreground">Brak uprawnien</span>
   }
 
   return (
-    <div
-      className={cn(
-        'flex items-center gap-2',
-        layout === 'compact' ? 'flex-col items-start' : 'flex-wrap'
-      )}
-    >
-      <Select value={role} onValueChange={handleRole} disabled={pending}>
-        <SelectTrigger
-          size="sm"
-          className={layout === 'compact' ? 'w-28' : 'w-32'}
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {assignableRoles.map((r) => (
-            <SelectItem key={r} value={r}>
-              {roleLabels[r]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <>
+      <div
+        className={cn(
+          'flex items-center gap-2',
+          layout === 'compact' ? 'flex-col items-start' : 'flex-wrap'
+        )}
+      >
+        <Select value={role} onValueChange={handleRole} disabled={pending}>
+          <SelectTrigger
+            size="sm"
+            className={layout === 'compact' ? 'w-28' : 'w-32'}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {assignableRoles.map((r) => (
+              <SelectItem key={r} value={r}>
+                {roleLabels[r]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      {status === AccountStatus.PENDING_APPROVAL && (
-        <Button
-          size="sm"
-          disabled={pending}
-          onClick={() => handleStatus(AccountStatus.ACTIVE)}
-        >
-          Zatwierdz
-        </Button>
-      )}
-      {status === AccountStatus.ACTIVE && (
-        <Button
-          size="sm"
-          variant="destructive"
-          disabled={pending}
-          onClick={() => handleStatus(AccountStatus.DISABLED)}
-        >
-          Dezaktywuj
-        </Button>
-      )}
-      {status === AccountStatus.DISABLED && (
-        <Button
-          size="sm"
-          disabled={pending}
-          onClick={() => handleStatus(AccountStatus.ACTIVE)}
-        >
-          Aktywuj
-        </Button>
-      )}
-    </div>
+        {status === AccountStatus.PENDING_APPROVAL && (
+          <Button
+            size="sm"
+            disabled={pending}
+            onClick={() => handleStatus(AccountStatus.ACTIVE)}
+          >
+            Zatwierdz
+          </Button>
+        )}
+        {status === AccountStatus.ACTIVE && (
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={pending}
+            onClick={() => handleStatus(AccountStatus.DISABLED)}
+          >
+            Dezaktywuj
+          </Button>
+        )}
+        {status === AccountStatus.DISABLED && (
+          <Button
+            size="sm"
+            disabled={pending}
+            onClick={() => handleStatus(AccountStatus.ACTIVE)}
+          >
+            Aktywuj
+          </Button>
+        )}
+        {canDelete && (
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={pending}
+            onClick={() => setConfirmOpen(true)}
+          >
+            Usuń
+          </Button>
+        )}
+      </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usunięcie konta</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć rekord użytkownika {email}? Operacja
+              jest nieodwracalna, ale będzie można ponownie zarejestrować konto
+              z tym samym loginem - adresem e-mail.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Usuń</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
