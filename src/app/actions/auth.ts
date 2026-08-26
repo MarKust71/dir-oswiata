@@ -167,6 +167,11 @@ export async function logoutAction() {
   redirect('/login')
 }
 
+export async function logoutForInactivityAction() {
+  await deleteSession()
+  redirect('/login?reason=inactivity')
+}
+
 export async function verifyEmailAction(token: string) {
   try {
     const record = await prisma.verificationToken.findUnique({
