@@ -23,6 +23,7 @@ import { ResultsWindowForm } from './results-window-form'
 import { ResultsLimitsForm } from './results-limits-form'
 import { RelinkResultsForm } from './relink-results-form'
 import { InactivityTimeoutForm } from './inactivity-timeout-form'
+import { BackupForm } from './backup-form'
 
 export default async function SettingsPage() {
   await requireRole([Role.ADMIN])
@@ -162,6 +163,22 @@ export default async function SettingsPage() {
             <InactivityTimeoutForm
               initialSeconds={String(inactivityTimeoutSeconds)}
             />
+          </CardContent>
+        </Card>
+
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Kopia zapasowa bazy danych
+            </CardTitle>
+            <CardDescription>
+              Pobierz plik z zawartością wszystkich tabel lub przywróć je z
+              wcześniej pobranego pliku. Przywrócenie zastępuje całą bieżącą
+              zawartość bazy danych.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col">
+            <BackupForm />
           </CardContent>
         </Card>
       </div>
