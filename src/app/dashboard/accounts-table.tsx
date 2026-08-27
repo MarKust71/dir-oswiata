@@ -39,6 +39,8 @@ const STATUS_BADGE_VARIANT: Record<
 
 const dateFormatter = new Intl.DateTimeFormat('pl-PL', {
   dateStyle: 'medium',
+  timeStyle: 'medium',
+  timeZone: 'Europe/Warsaw',
 })
 
 function fullName(user: { firstName: string | null; lastName: string | null }) {
