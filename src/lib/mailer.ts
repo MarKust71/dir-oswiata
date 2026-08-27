@@ -1,11 +1,31 @@
 import 'server-only'
 import nodemailer from 'nodemailer'
 
+import packageJson from '../../package.json'
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from '@/lib/contact'
 import { formatWarsawTimestamp } from '@/lib/warsaw-time'
 
 const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM, APP_URL } =
   process.env
+
+// Stopka dodawana do treści każdego wysyłanego maila - zarówno powiadomień,
+// jak i wiadomości związanych z zakładaniem/aktywacją konta.
+const EMAIL_FOOTER_LINES = [
+  'Dolnośląska Izba Rzemieślnicza we Wrocławiu',
+  `${CONTACT_EMAIL}, ${CONTACT_PHONE_DISPLAY}`,
+  `System DIR Oświata, v.${packageJson.version}`,
+]
+
+const EMAIL_FOOTER_TEXT = EMAIL_FOOTER_LINES.join('\n')
+const EMAIL_FOOTER_HTML = `<p>${EMAIL_FOOTER_LINES.join('<br>')}</p>`
+
+function withFooter(body: string): string {
+  return `${body}\n\n${EMAIL_FOOTER_TEXT}`
+}
+
+function withFooterHtml(body: string): string {
+  return `${body}<hr />${EMAIL_FOOTER_HTML}`
+}
 
 function getTransporter() {
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASSWORD) {
@@ -39,8 +59,12 @@ export async function sendVerificationEmail(email: string, token: string) {
       from: SMTP_FROM || SMTP_USER,
       to: email,
       subject: 'Potwierdź swój adres e-mail',
-      text: `Kliknij w link, aby potwierdzić adres e-mail: ${verifyUrl}`,
-      html: `<p>Kliknij link, aby potwierdzić adres e-mail:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
+      text: withFooter(
+        `Kliknij w link, aby potwierdzić adres e-mail: ${verifyUrl}`
+      ),
+      html: withFooterHtml(
+        `<p>Kliknij link, aby potwierdzić adres e-mail:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`
+      ),
     })
 
     console.log(
@@ -63,7 +87,9 @@ export async function sendPendingApprovalNotification(
 ) {
   if (adminEmails.length === 0) return
 
-  const text = `${formatWarsawTimestamp(new Date())} - użytkownik ${userEmail} oczekuje na akceptację`
+  const text = withFooter(
+    `${formatWarsawTimestamp(new Date())} - użytkownik ${userEmail} oczekuje na akceptację`
+  )
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -114,8 +140,12 @@ export async function sendAccountActivatedEmail(email: string) {
       from: SMTP_FROM || SMTP_USER,
       to: email,
       subject: 'Twoje konto zostało aktywowane',
-      text: `Twoje konto jest już aktywne. Możesz się zalogować: ${loginUrl}`,
-      html: `<p>Twoje konto jest już aktywne. Możesz się zalogować:</p><p><a href="${loginUrl}">${loginUrl}</a></p>`,
+      text: withFooter(
+        `Twoje konto jest już aktywne. Możesz się zalogować: ${loginUrl}`
+      ),
+      html: withFooterHtml(
+        `<p>Twoje konto jest już aktywne. Możesz się zalogować:</p><p><a href="${loginUrl}">${loginUrl}</a></p>`
+      ),
     })
 
     console.log(
@@ -141,7 +171,9 @@ export async function sendAccountStatusChangeAdminNotification(
   if (adminEmails.length === 0) return
 
   const verb = activated ? 'aktywował' : 'dezaktywował'
-  const text = `${formatWarsawTimestamp(new Date())}: Użytkownik ${actorEmail} (rola: ${actorRoleLabel}) ${verb} konto użytkownika ${targetEmail}.`
+  const text = withFooter(
+    `${formatWarsawTimestamp(new Date())}: Użytkownik ${actorEmail} (rola: ${actorRoleLabel}) ${verb} konto użytkownika ${targetEmail}.`
+  )
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -183,7 +215,9 @@ export async function sendAccountLockedAdminNotification(
 ) {
   if (adminEmails.length === 0) return
 
-  const text = `Konto użytkownika "${userEmail}" zostało zablokowane ze względu na trzykrotne wprowadzenie błędnego numeru wniosku.`
+  const text = withFooter(
+    `Konto użytkownika "${userEmail}" zostało zablokowane ze względu na trzykrotne wprowadzenie błędnego numeru wniosku.`
+  )
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -218,7 +252,9 @@ export async function sendAccountLockedAdminNotification(
 }
 
 export async function sendAccountLockedUserEmail(email: string) {
-  const text = `Twoje konto "DIR Oświata" zostało zablokowane. Skontaktuj się z administratorem.\n\n${CONTACT_EMAIL}, ${CONTACT_PHONE_DISPLAY}`
+  const text = withFooter(
+    'Twoje konto "DIR Oświata" zostało zablokowane. Skontaktuj się z administratorem.'
+  )
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -233,7 +269,9 @@ export async function sendAccountLockedUserEmail(email: string) {
       to: email,
       subject: 'Twoje konto zostało zablokowane',
       text,
-      html: `<p>Twoje konto "DIR Oświata" zostało zablokowane. Skontaktuj się z administratorem.</p><p>${CONTACT_EMAIL}, ${CONTACT_PHONE_DISPLAY}</p>`,
+      html: withFooterHtml(
+        '<p>Twoje konto "DIR Oświata" zostało zablokowane. Skontaktuj się z administratorem.</p>'
+      ),
     })
 
     console.log(
@@ -255,7 +293,9 @@ export async function sendResultsViewLimitReachedAdminNotification(
 ) {
   if (adminEmails.length === 0) return
 
-  const text = `Konto użytkownika "${userEmail}" zostało zablokowane ze względu na wykorzystanie limitu 3 wyświetleń wyników.`
+  const text = withFooter(
+    `Konto użytkownika "${userEmail}" zostało zablokowane ze względu na wykorzystanie limitu 3 wyświetleń wyników.`
+  )
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -295,7 +335,9 @@ export async function sendMissingResultAdminNotification(
 ) {
   if (adminEmails.length === 0) return
 
-  const text = `Użytkownik "${userEmail}" zalogował się w okresie udostępniania wyników, ale nie znaleziono dla niego wyniku w bazie (dopasowanie po imieniu, nazwisku i numerze PESEL).`
+  const text = withFooter(
+    `Użytkownik "${userEmail}" zalogował się w okresie udostępniania wyników, ale nie znaleziono dla niego wyniku w bazie (dopasowanie po imieniu, nazwisku i numerze PESEL).`
+  )
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -330,7 +372,9 @@ export async function sendMissingResultAdminNotification(
 }
 
 export async function sendResultsViewLimitReachedUserEmail(email: string) {
-  const text = `Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.\n\n${CONTACT_EMAIL}, ${CONTACT_PHONE_DISPLAY}`
+  const text = withFooter(
+    'Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.'
+  )
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -345,7 +389,9 @@ export async function sendResultsViewLimitReachedUserEmail(email: string) {
       to: email,
       subject: 'Twoje konto zostało zablokowane',
       text,
-      html: `<p>Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.</p><p>${CONTACT_EMAIL}, ${CONTACT_PHONE_DISPLAY}</p>`,
+      html: withFooterHtml(
+        '<p>Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.</p>'
+      ),
     })
 
     console.log(
