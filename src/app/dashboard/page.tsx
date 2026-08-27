@@ -4,16 +4,19 @@ import { Role } from '@/generated/prisma/enums'
 
 import { AccountsTable } from './accounts-table'
 import { RoleFilter } from './role-filter'
+import { StatusFilter } from './status-filter'
 import { parseSelectedRoles } from './roles'
+import { parseSelectedStatuses } from './statuses'
 
 export default async function DashboardPage(props: PageProps<'/dashboard'>) {
   const actor = await requireRole([Role.ADMIN, Role.USER])
 
   const searchParams = await props.searchParams
   const selectedRoles = parseSelectedRoles(searchParams.role)
+  const selectedStatuses = parseSelectedStatuses(searchParams.status)
 
   const users = await prisma.user.findMany({
-    where: { role: { in: selectedRoles } },
+    where: { role: { in: selectedRoles }, status: { in: selectedStatuses } },
     orderBy: { email: 'asc' },
     select: {
       id: true,
@@ -61,7 +64,16 @@ export default async function DashboardPage(props: PageProps<'/dashboard'>) {
         </p>
       </div>
 
-      <RoleFilter key={selectedRoles.join(',')} initialRoles={selectedRoles} />
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <RoleFilter
+          key={selectedRoles.join(',')}
+          initialRoles={selectedRoles}
+        />
+        <StatusFilter
+          key={selectedStatuses.join(',')}
+          initialStatuses={selectedStatuses}
+        />
+      </div>
 
       <AccountsTable
         users={users}
