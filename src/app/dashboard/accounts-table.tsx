@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import { canManageAccount } from '@/lib/permissions'
 import { roleLabels, statusLabels } from '@/lib/labels'
@@ -134,11 +134,15 @@ export function AccountsTable({
   actorId,
   actorRole,
   assignableRoles,
+  description,
+  filters,
 }: {
   users: AccountRow[]
   actorId: string
   actorRole: Role
   assignableRoles: Role[]
+  description: ReactNode
+  filters: ReactNode
 }) {
   const [query, setQuery] = useState('')
 
@@ -148,7 +152,19 @@ export function AccountsTable({
     : users
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="font-heading text-2xl font-semibold">
+          Zarządzanie kontami{' '}
+          <span className="font-normal text-xl">({filteredUsers.length})</span>
+        </h1>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        {filters}
+      </div>
+
       <Input
         type="search"
         placeholder="Szukaj po e-mailu, imieniu, nazwisku lub telefonie…"
