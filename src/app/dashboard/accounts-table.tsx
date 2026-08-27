@@ -24,7 +24,6 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { ResultDetailsButton } from '@/components/result-details'
-import { cn } from '@/lib/utils'
 
 import { AccountActions } from './account-actions'
 
@@ -37,8 +36,6 @@ const STATUS_BADGE_VARIANT: Record<
   [AccountStatus.ACTIVE]: 'secondary',
   [AccountStatus.DISABLED]: 'destructive',
 }
-
-const ALL_STATUSES = Object.values(AccountStatus) as AccountStatus[]
 
 const dateFormatter = new Intl.DateTimeFormat('pl-PL', {
   dateStyle: 'medium',
@@ -144,26 +141,11 @@ export function AccountsTable({
   assignableRoles: Role[]
 }) {
   const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<Set<AccountStatus>>(
-    () => new Set(ALL_STATUSES)
-  )
-
-  function toggleStatus(status: AccountStatus) {
-    setStatusFilter((prev) => {
-      const next = new Set(prev)
-      if (next.has(status)) next.delete(status)
-      else next.add(status)
-
-      return next
-    })
-  }
 
   const normalizedQuery = query.replace(/\s+/g, '').toLowerCase()
-  const filteredUsers = users.filter(
-    (user) =>
-      statusFilter.has(user.status) &&
-      (!normalizedQuery || searchIndex(user).includes(normalizedQuery))
-  )
+  const filteredUsers = normalizedQuery
+    ? users.filter((user) => searchIndex(user).includes(normalizedQuery))
+    : users
 
   return (
     <div className="flex flex-col gap-4">
@@ -174,32 +156,6 @@ export function AccountsTable({
         onChange={(event) => setQuery(event.target.value)}
         className="max-w-sm"
       />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-muted-foreground">Status:</span>
-        {ALL_STATUSES.map((status) => {
-          const active = statusFilter.has(status)
-
-          return (
-            <button
-              key={status}
-              type="button"
-              onClick={() => toggleStatus(status)}
-              aria-pressed={active}
-            >
-              <Badge
-                variant={active ? STATUS_BADGE_VARIANT[status] : 'outline'}
-                className={cn(
-                  'cursor-pointer select-none',
-                  !active && 'opacity-50'
-                )}
-              >
-                {statusLabels[status]}
-              </Badge>
-            </button>
-          )
-        })}
-      </div>
 
       {/* Desktop: tabela */}
       <Card className="hidden md:block">
