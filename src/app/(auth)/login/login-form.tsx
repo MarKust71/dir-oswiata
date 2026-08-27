@@ -8,7 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-export function LoginForm() {
+export function LoginForm({
+  hideRegisterLink = false,
+}: {
+  hideRegisterLink?: boolean
+}) {
   const [state, action, pending] = useActionState(loginAction, undefined)
   const [resendPending, startResend] = useTransition()
   const [resendMessage, setResendMessage] = useState<string | null>(null)
@@ -83,15 +87,17 @@ export function LoginForm() {
         {pending ? 'Logowanie...' : 'Zaloguj się'}
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
-        Nie masz konta?{' '}
-        <Link
-          href="/register"
-          className="font-medium text-primary underline-offset-4 hover:underline"
-        >
-          Zarejestruj się
-        </Link>
-      </p>
+      {!hideRegisterLink && (
+        <p className="text-center text-sm text-muted-foreground">
+          Nie masz konta?{' '}
+          <Link
+            href="/register"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Zarejestruj się
+          </Link>
+        </p>
+      )}
     </form>
   )
 }

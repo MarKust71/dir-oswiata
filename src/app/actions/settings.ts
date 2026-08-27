@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireRole } from '@/lib/dal'
 import {
   setInactivityTimeoutSeconds,
+  setMaintenanceMode,
   setNotificationEmails,
   setResultsLimits,
   setResultsVisibilityWindow,
@@ -121,6 +122,29 @@ export async function updateResultsLimitsAction(
     revalidatePath('/settings')
 
     return { message: 'Zapisano limity.' }
+  } catch (error) {
+    if (
+      isDatabaseConnectionError(error) ||
+      (error instanceof Error && error.message === DB_CONNECTION_ERROR_MESSAGE)
+    ) {
+      return { error: DB_CONNECTION_ERROR_MESSAGE }
+    }
+    throw error
+  }
+}
+
+export async function updateMaintenanceModeAction(
+  enabled: boolean
+): Promise<{ error?: string }> {
+  try {
+    await requireRole([Role.ADMIN])
+
+    await setMaintenanceMode(enabled)
+    revalidatePath('/settings')
+    revalidatePath('/login')
+    revalidatePath('/')
+
+    return {}
   } catch (error) {
     if (
       isDatabaseConnectionError(error) ||

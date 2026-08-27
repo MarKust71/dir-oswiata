@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import packageJson from '../../package.json'
 import { getCurrentUser } from '@/lib/dal'
+import { getMaintenanceMode } from '@/lib/settings'
 import { logoutAction } from '@/app/actions/auth'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +17,7 @@ import { Role } from '@/generated/prisma/enums'
 
 export async function SiteHeader() {
   const user = await getCurrentUser()
+  const maintenanceMode = user ? false : await getMaintenanceMode()
 
   return (
     <header className="border-b bg-background">
@@ -78,9 +80,11 @@ export async function SiteHeader() {
             >
               Zaloguj
             </Link>
-            <Link href="/register" className={buttonVariants({ size: 'sm' })}>
-              Zarejestruj
-            </Link>
+            {!maintenanceMode && (
+              <Link href="/register" className={buttonVariants({ size: 'sm' })}>
+                Zarejestruj
+              </Link>
+            )}
           </nav>
         )}
       </div>

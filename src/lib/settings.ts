@@ -125,6 +125,26 @@ export async function setResultsLimits(
   ])
 }
 
+// Tryb przerwy konserwacyjnej - blokuje logowanie kontom o roli STUDENT i
+// ukrywa skróty do rejestracji - zob. src/app/actions/auth.ts.
+export const MAINTENANCE_MODE_KEY = 'maintenance_mode'
+
+export async function getMaintenanceMode(): Promise<boolean> {
+  const row = await prisma.settings.findUnique({
+    where: { key: MAINTENANCE_MODE_KEY },
+  })
+
+  return row?.value === 'true'
+}
+
+export async function setMaintenanceMode(enabled: boolean) {
+  await prisma.settings.upsert({
+    where: { key: MAINTENANCE_MODE_KEY },
+    create: { key: MAINTENANCE_MODE_KEY, value: String(enabled) },
+    update: { value: String(enabled) },
+  })
+}
+
 export async function getNotificationEmails(): Promise<string[]> {
   const row = await prisma.settings.findUnique({
     where: { key: NOTIFICATION_EMAILS_KEY },
