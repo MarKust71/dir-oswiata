@@ -86,7 +86,7 @@ export function AccountActions({
   }
 
   if (!canManage) {
-    return <span className="text-sm text-muted-foreground">Brak uprawnien</span>
+    return <span className="text-sm text-muted-foreground">Niedostpne</span>
   }
 
   return (
