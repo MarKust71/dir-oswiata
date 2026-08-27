@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { getMaintenanceMode } from '@/lib/settings'
 
 import { LoginForm } from './login-form'
 
@@ -13,6 +14,8 @@ export default async function LoginPage(props: PageProps<'/login'>) {
   const reason = Array.isArray(searchParams.reason)
     ? searchParams.reason[0]
     : searchParams.reason
+
+  const maintenanceMode = await getMaintenanceMode()
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-12">
@@ -24,13 +27,24 @@ export default async function LoginPage(props: PageProps<'/login'>) {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
+          {maintenanceMode && (
+            <div className="rounded-md bg-muted p-3 text-sm text-center">
+              <p className="font-medium">Przerwa konserwacyjna</p>
+              <p className="text-muted-foreground">
+                Serwis będzie dostępny wkrótce.
+              </p>
+              <p className="text-muted-foreground">
+                Zajrzyj ponownie za kilka minut.
+              </p>
+            </div>
+          )}
           {reason === 'inactivity' && (
             <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
               Ze względów bezpieczeństwa nastąpiło automatyczne wylogowanie.
               Możesz zalogować się ponownie.
             </p>
           )}
-          <LoginForm />
+          <LoginForm hideRegisterLink={maintenanceMode} />
         </CardContent>
       </Card>
     </div>

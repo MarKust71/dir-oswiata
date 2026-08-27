@@ -1,10 +1,12 @@
 import Link from 'next/link'
 
 import { getCurrentUser, homePathForRole } from '@/lib/dal'
+import { getMaintenanceMode } from '@/lib/settings'
 import { buttonVariants } from '@/components/ui/button'
 
 export default async function Home() {
   const user = await getCurrentUser()
+  const maintenanceMode = user ? false : await getMaintenanceMode()
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-24 text-center">
@@ -31,9 +33,11 @@ export default async function Home() {
           >
             Zaloguj się
           </Link>
-          <Link href="/register" className={buttonVariants({ size: 'lg' })}>
-            Zarejestruj się
-          </Link>
+          {!maintenanceMode && (
+            <Link href="/register" className={buttonVariants({ size: 'lg' })}>
+              Zarejestruj się
+            </Link>
+          )}
         </div>
       )}
     </div>

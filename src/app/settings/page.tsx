@@ -1,6 +1,7 @@
 import { requireRole } from '@/lib/dal'
 import {
   getInactivityTimeoutSeconds,
+  getMaintenanceMode,
   getMaxApplicationNumberAttempts,
   getMaxResultsViewCount,
   getNotificationEmails,
@@ -24,6 +25,7 @@ import { ResultsLimitsForm } from './results-limits-form'
 import { RelinkResultsForm } from './relink-results-form'
 import { InactivityTimeoutForm } from './inactivity-timeout-form'
 import { BackupForm } from './backup-form'
+import { MaintenanceModeForm } from './maintenance-mode-form'
 
 export default async function SettingsPage() {
   await requireRole([Role.ADMIN])
@@ -35,12 +37,14 @@ export default async function SettingsPage() {
     maxApplicationNumberAttempts,
     maxResultsViewCount,
     inactivityTimeoutSeconds,
+    maintenanceModeEnabled,
   ] = await Promise.all([
     getResultsVisibleFrom(),
     getResultsVisibleUntil(),
     getMaxApplicationNumberAttempts(),
     getMaxResultsViewCount(),
     getInactivityTimeoutSeconds(),
+    getMaintenanceMode(),
   ])
 
   return (
@@ -179,6 +183,29 @@ export default async function SettingsPage() {
           </CardHeader>
           <CardContent className="flex flex-1 flex-col">
             <BackupForm />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div>
+        <h2 className="font-heading text-xl font-semibold">Przełączniki</h2>
+        <p className="text-sm text-muted-foreground">
+          Globalne przełączniki trybu działania aplikacji.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle className="text-base">Przerwa konserwacyjna</CardTitle>
+            <CardDescription>
+              Po włączeniu konta o roli Student nie mogą się zalogować, a na
+              stronie logowania oraz stronie głównej ukrywane są skróty do
+              rejestracji.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col">
+            <MaintenanceModeForm initialEnabled={maintenanceModeEnabled} />
           </CardContent>
         </Card>
       </div>

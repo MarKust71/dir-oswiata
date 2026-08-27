@@ -21,7 +21,7 @@ import {
   sendPendingApprovalNotification,
   sendVerificationEmail,
 } from '@/lib/mailer'
-import { getNotificationEmails } from '@/lib/settings'
+import { getMaintenanceMode, getNotificationEmails } from '@/lib/settings'
 import { AccountStatus, Role } from '@/generated/prisma/enums'
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000 // 24h
@@ -155,6 +155,13 @@ export async function loginAction(
     return {
       message:
         'To konto zostało dezaktywowane. Skontaktuj się z administratorem.',
+    }
+  }
+
+  if (user.role === Role.STUDENT && (await getMaintenanceMode())) {
+    return {
+      message:
+        'Przerwa konserwacyjna. Serwis będzie dostępny wkrótce. Zajrzyj ponownie za kilka minut.',
     }
   }
 
