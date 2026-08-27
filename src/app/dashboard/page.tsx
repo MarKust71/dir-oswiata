@@ -52,35 +52,30 @@ export default async function DashboardPage(props: PageProps<'/dashboard'>) {
     actor.role === Role.ADMIN ? [Role.STUDENT, Role.USER, Role.ADMIN] : []
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold">
-          Zarządzanie kontami
-        </h1>
-        <p className="text-sm text-muted-foreground">
+    <AccountsTable
+      users={users}
+      actorId={actor.id}
+      actorRole={actor.role}
+      assignableRoles={assignableRoles}
+      description={
+        <>
           Zatwierdzaj nowe konta i zarządzaj rolami użytkowników.
           {actor.role === Role.USER &&
             ' Konta z rolą Administrator są widoczne, ale poza Twoimi uprawnieniami.'}
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <RoleFilter
-          key={selectedRoles.join(',')}
-          initialRoles={selectedRoles}
-        />
-        <StatusFilter
-          key={selectedStatuses.join(',')}
-          initialStatuses={selectedStatuses}
-        />
-      </div>
-
-      <AccountsTable
-        users={users}
-        actorId={actor.id}
-        actorRole={actor.role}
-        assignableRoles={assignableRoles}
-      />
-    </div>
+        </>
+      }
+      filters={
+        <>
+          <RoleFilter
+            key={selectedRoles.join(',')}
+            initialRoles={selectedRoles}
+          />
+          <StatusFilter
+            key={selectedStatuses.join(',')}
+            initialStatuses={selectedStatuses}
+          />
+        </>
+      }
+    />
   )
 }
