@@ -10,8 +10,3 @@ export function canManageAccount(
 ): boolean {
   return !(target.role === Role.ADMIN && actor.role !== Role.ADMIN)
 }
-
-/** Czy actor może nadać użytkownikowi podaną rolę. */
-export function canAssignRole(actor: ActorLike, role: Role): boolean {
-  return !(role === Role.ADMIN && actor.role !== Role.ADMIN)
-}
