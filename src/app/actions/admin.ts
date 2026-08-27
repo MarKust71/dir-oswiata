@@ -5,8 +5,13 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
 import { canManageAccount } from '@/lib/permissions'
-import { sendAccountActivatedEmail } from '@/lib/mailer'
+import {
+  sendAccountActivatedEmail,
+  sendAccountStatusChangeAdminNotification,
+} from '@/lib/mailer'
 import { tryLinkUserToResult } from '@/lib/results-matching'
+import { getNotificationEmails } from '@/lib/settings'
+import { roleLabels } from '@/lib/labels'
 import {
   DB_CONNECTION_ERROR_MESSAGE,
   isDatabaseConnectionError,
@@ -101,6 +106,15 @@ export async function setAccountStatusAction(
         await tryLinkUserToResult(target)
       }
     }
+
+    const notificationEmails = await getNotificationEmails()
+    await sendAccountStatusChangeAdminNotification(
+      notificationEmails,
+      actor.email,
+      roleLabels[actor.role],
+      target.email,
+      nextStatus === AccountStatus.ACTIVE
+    )
 
     revalidatePath('/dashboard')
 

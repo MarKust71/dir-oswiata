@@ -2,6 +2,7 @@ import 'server-only'
 import nodemailer from 'nodemailer'
 
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from '@/lib/contact'
+import { formatWarsawTimestamp } from '@/lib/warsaw-time'
 
 const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM, APP_URL } =
   process.env
@@ -56,18 +57,13 @@ export async function sendVerificationEmail(email: string, token: string) {
   }
 }
 
-const notificationTimestampFormatter = new Intl.DateTimeFormat('pl-PL', {
-  dateStyle: 'short',
-  timeStyle: 'short',
-})
-
 export async function sendPendingApprovalNotification(
   adminEmails: string[],
   userEmail: string
 ) {
   if (adminEmails.length === 0) return
 
-  const text = `${notificationTimestampFormatter.format(new Date())} - użytkownik ${userEmail} oczekuje na akceptację`
+  const text = `${formatWarsawTimestamp(new Date())} - użytkownik ${userEmail} oczekuje na akceptację`
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -133,6 +129,52 @@ export async function sendAccountActivatedEmail(email: string) {
       error
     )
   }
+}
+
+export async function sendAccountStatusChangeAdminNotification(
+  adminEmails: string[],
+  actorEmail: string,
+  actorRoleLabel: string,
+  targetEmail: string,
+  activated: boolean
+) {
+  if (adminEmails.length === 0) return
+
+  const verb = activated ? 'aktywował' : 'dezaktywował'
+  const text = `${formatWarsawTimestamp(new Date())}: Użytkownik ${actorEmail} (rola: ${actorRoleLabel}) ${verb} konto użytkownika ${targetEmail}.`
+  const transporter = getTransporter()
+
+  if (!transporter) {
+    console.warn(
+      `[mailer] SMTP nie jest skonfigurowany. Powiadomienie: ${text}`
+    )
+
+    return
+  }
+
+  await Promise.all(
+    adminEmails.map(async (to) => {
+      try {
+        const info = await transporter.sendMail({
+          from: SMTP_FROM || SMTP_USER,
+          to,
+          subject: activated
+            ? 'Konto użytkownika zostało aktywowane'
+            : 'Konto użytkownika zostało dezaktywowane',
+          text,
+        })
+
+        console.log(
+          `[mailer] Wysłano powiadomienie o zmianie statusu konta do ${to} (messageId: ${info.messageId}, response: ${info.response})`
+        )
+      } catch (error) {
+        console.error(
+          `[mailer] Nie udało się wysłać powiadomienia o zmianie statusu konta do ${to}:`,
+          error
+        )
+      }
+    })
+  )
 }
 
 export async function sendAccountLockedAdminNotification(

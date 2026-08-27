@@ -81,6 +81,21 @@ export function toWarsawLocalDateTimeInputValue(date: Date): string {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
 }
 
+const warsawTimestampFormatter = new Intl.DateTimeFormat('pl-PL', {
+  timeZone: WARSAW_TIME_ZONE,
+  dateStyle: 'short',
+  timeStyle: 'short',
+})
+
+/**
+ * Formatuje moment w czasie jako datę i godzinę czasu lokalnego Warszawy
+ * (np. "27.08.2026, 14:35") - do użytku w treściach powiadomień e-mail,
+ * żeby nie pokazywały czasu UTC serwera.
+ */
+export function formatWarsawTimestamp(date: Date): string {
+  return warsawTimestampFormatter.format(date)
+}
+
 function formatOffset(offsetMinutes: number): string {
   const sign = offsetMinutes >= 0 ? '+' : '-'
   const abs = Math.abs(offsetMinutes)
