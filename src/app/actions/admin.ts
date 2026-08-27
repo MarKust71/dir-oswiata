@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
-import { canManageAccount, canAssignRole } from '@/lib/permissions'
+import { canManageAccount } from '@/lib/permissions'
 import { sendAccountActivatedEmail } from '@/lib/mailer'
 import { tryLinkUserToResult } from '@/lib/results-matching'
 import {
@@ -148,17 +148,15 @@ export async function setAccountRoleAction(
   try {
     const actor = await requireRole([Role.ADMIN, Role.USER])
 
+    if (actor.role !== Role.ADMIN) {
+      return { error: 'Tylko administrator może zmienić rolę użytkownika.' }
+    }
+
     const target = await loadTarget(userId)
     if (!target) return { error: 'Nie znaleziono konta.' }
 
     if (target.id === actor.id) {
       return { error: 'Nie możesz zmienić własnej roli.' }
-    }
-    if (!canManageAccount(actor, target)) {
-      return { error: 'Brak uprawnień do zarządzania tym kontem.' }
-    }
-    if (!canAssignRole(actor, nextRole)) {
-      return { error: 'Brak uprawnień do nadania tej roli.' }
     }
 
     await prisma.user.update({

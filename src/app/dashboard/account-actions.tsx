@@ -97,21 +97,23 @@ export function AccountActions({
           layout === 'compact' ? 'flex-col items-start' : 'flex-wrap'
         )}
       >
-        <Select value={role} onValueChange={handleRole} disabled={pending}>
-          <SelectTrigger
-            size="sm"
-            className={layout === 'compact' ? 'w-28' : 'w-32'}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {assignableRoles.map((r) => (
-              <SelectItem key={r} value={r}>
-                {roleLabels[r]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {assignableRoles.length > 0 && (
+          <Select value={role} onValueChange={handleRole} disabled={pending}>
+            <SelectTrigger
+              size="sm"
+              className={layout === 'compact' ? 'w-28' : 'w-32'}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {assignableRoles.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {roleLabels[r]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         {status === AccountStatus.PENDING_APPROVAL && (
           <Button

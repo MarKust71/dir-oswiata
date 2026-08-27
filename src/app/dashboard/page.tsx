@@ -43,10 +43,10 @@ export default async function DashboardPage(props: PageProps<'/dashboard'>) {
     },
   })
 
+  // Zmianę roli może wykonać wyłącznie administrator - dla pozostałych
+  // brak przypisywalnych ról ukrywa selektor w AccountActions.
   const assignableRoles: Role[] =
-    actor.role === Role.ADMIN
-      ? [Role.STUDENT, Role.USER, Role.ADMIN]
-      : [Role.STUDENT, Role.USER]
+    actor.role === Role.ADMIN ? [Role.STUDENT, Role.USER, Role.ADMIN] : []
 
   return (
     <div className="flex flex-col gap-6">
