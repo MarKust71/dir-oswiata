@@ -185,16 +185,7 @@ export default async function SettingsPage() {
             <BackupForm />
           </CardContent>
         </Card>
-      </div>
 
-      <div>
-        <h2 className="font-heading text-xl font-semibold">Przełączniki</h2>
-        <p className="text-sm text-muted-foreground">
-          Globalne przełączniki trybu działania aplikacji.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card className="h-full">
           <CardHeader>
             <CardTitle className="text-base">Przerwa konserwacyjna</CardTitle>
