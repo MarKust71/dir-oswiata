@@ -87,9 +87,9 @@ export async function sendPendingApprovalNotification(
 ) {
   if (adminEmails.length === 0) return
 
-  const text = withFooter(
-    `${formatWarsawTimestamp(new Date())} - użytkownik ${userEmail} oczekuje na akceptację`
-  )
+  const message = `${formatWarsawTimestamp(new Date())} - użytkownik ${userEmail} oczekuje na akceptację`
+  const text = withFooter(message)
+  const html = withFooterHtml(`<p>${message}</p>`)
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -108,6 +108,7 @@ export async function sendPendingApprovalNotification(
           to,
           subject: 'Nowe konto oczekuje na akceptację',
           text,
+          html,
         })
 
         console.log(
@@ -171,9 +172,9 @@ export async function sendAccountStatusChangeAdminNotification(
   if (adminEmails.length === 0) return
 
   const verb = activated ? 'aktywował' : 'dezaktywował'
-  const text = withFooter(
-    `${formatWarsawTimestamp(new Date())}: Użytkownik ${actorEmail} (rola: ${actorRoleLabel}) ${verb} konto użytkownika ${targetEmail}.`
-  )
+  const message = `${formatWarsawTimestamp(new Date())}: Użytkownik ${actorEmail} (rola: ${actorRoleLabel}) ${verb} konto użytkownika ${targetEmail}.`
+  const text = withFooter(message)
+  const html = withFooterHtml(`<p>${message}</p>`)
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -194,6 +195,7 @@ export async function sendAccountStatusChangeAdminNotification(
             ? 'Konto użytkownika zostało aktywowane'
             : 'Konto użytkownika zostało dezaktywowane',
           text,
+          html,
         })
 
         console.log(
@@ -215,9 +217,9 @@ export async function sendAccountLockedAdminNotification(
 ) {
   if (adminEmails.length === 0) return
 
-  const text = withFooter(
-    `Konto użytkownika "${userEmail}" zostało zablokowane ze względu na trzykrotne wprowadzenie błędnego numeru wniosku.`
-  )
+  const message = `Konto użytkownika "${userEmail}" zostało zablokowane ze względu na trzykrotne wprowadzenie błędnego numeru wniosku.`
+  const text = withFooter(message)
+  const html = withFooterHtml(`<p>${message}</p>`)
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -236,6 +238,7 @@ export async function sendAccountLockedAdminNotification(
           to,
           subject: 'Konto użytkownika zostało zablokowane',
           text,
+          html,
         })
 
         console.log(
@@ -293,9 +296,9 @@ export async function sendResultsViewLimitReachedAdminNotification(
 ) {
   if (adminEmails.length === 0) return
 
-  const text = withFooter(
-    `Konto użytkownika "${userEmail}" zostało zablokowane ze względu na wykorzystanie limitu 3 wyświetleń wyników.`
-  )
+  const message = `Konto użytkownika "${userEmail}" zostało zablokowane ze względu na wykorzystanie limitu 3 wyświetleń wyników.`
+  const text = withFooter(message)
+  const html = withFooterHtml(`<p>${message}</p>`)
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -314,6 +317,7 @@ export async function sendResultsViewLimitReachedAdminNotification(
           to,
           subject: 'Konto użytkownika zostało zablokowane',
           text,
+          html,
         })
 
         console.log(
@@ -335,9 +339,9 @@ export async function sendMissingResultAdminNotification(
 ) {
   if (adminEmails.length === 0) return
 
-  const text = withFooter(
-    `Użytkownik "${userEmail}" zalogował się w okresie udostępniania wyników, ale nie znaleziono dla niego wyniku w bazie (dopasowanie po imieniu, nazwisku i numerze PESEL).`
-  )
+  const message = `Użytkownik "${userEmail}" zalogował się w okresie udostępniania wyników, ale nie znaleziono dla niego wyniku w bazie (dopasowanie po imieniu, nazwisku i numerze PESEL).`
+  const text = withFooter(message)
+  const html = withFooterHtml(`<p>${message}</p>`)
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -356,6 +360,7 @@ export async function sendMissingResultAdminNotification(
           to,
           subject: 'Brak wyniku dla użytkownika',
           text,
+          html,
         })
 
         console.log(
