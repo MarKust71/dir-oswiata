@@ -17,7 +17,7 @@ const EMAIL_FOOTER_LINES = [
 ]
 
 const EMAIL_FOOTER_TEXT = EMAIL_FOOTER_LINES.join('\n')
-const EMAIL_FOOTER_HTML = `<p>${EMAIL_FOOTER_LINES.join('<br>')}</p>`
+const EMAIL_FOOTER_HTML = `<p><strong>${EMAIL_FOOTER_LINES[0]}</strong><br><a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>, ${CONTACT_PHONE_DISPLAY}<br><span style="font-size:0.85em;">${EMAIL_FOOTER_LINES[2]}</span></p>`
 
 function withFooter(body: string): string {
   return `${body}\n\n${EMAIL_FOOTER_TEXT}`
