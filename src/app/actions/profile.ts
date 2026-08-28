@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
 import { deleteSession } from '@/lib/session'
+import { tryLinkUserToResult } from '@/lib/results-matching'
 import { getNotificationEmails } from '@/lib/settings'
 import {
   sendProfileCorrectionAdminNotification,
@@ -55,8 +56,9 @@ export async function updateProfileAction(
     // Poprawa danych mogła zmienić okoliczności dopasowania do wyniku
     // egzaminu - konto wraca więc do stanu wymagającego ponownej weryfikacji
     // i aktywacji przez administratora, tak jak nowo zarejestrowane konto.
-    // Ponowną próbę automatycznego dopasowania podejmuje panel dopiero po
-    // kolejnej aktywacji (zob. src/app/panel/page.tsx).
+    // Próbę automatycznego dopasowania podejmujemy od razu (a nie dopiero po
+    // reaktywacji), żeby administrator widział na liście już aktualny wynik
+    // powiązania.
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -68,6 +70,14 @@ export async function updateProfileAction(
         resultId: null,
         status: AccountStatus.DISABLED,
       },
+    })
+
+    await tryLinkUserToResult({
+      id: user.id,
+      firstName,
+      lastName,
+      peselPositions: validated.data.peselPositions,
+      peselDigits: validated.data.peselDigits,
     })
 
     const adminEmails = await getNotificationEmails()
