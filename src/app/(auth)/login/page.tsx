@@ -44,6 +44,12 @@ export default async function LoginPage(props: PageProps<'/login'>) {
               Możesz zalogować się ponownie.
             </p>
           )}
+          {reason === 'profile-correction' && (
+            <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+              Zapisaliśmy Twoje poprawione dane. Twoje konto wymaga teraz
+              ponownej aktywacji przez administratora.
+            </p>
+          )}
           <LoginForm hideRegisterLink={maintenanceMode} />
         </CardContent>
       </Card>

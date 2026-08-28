@@ -1,13 +1,13 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { useActionState, useState } from 'react'
 import Link from 'next/link'
 
 import { registerAction } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { PESEL_LENGTH, pickRandomPeselPositions } from '@/lib/pesel'
+import { PeselDigitInputs } from '@/components/pesel-digit-inputs'
 
 function RequiredMark() {
   return (
@@ -20,10 +20,6 @@ function RequiredMark() {
 
 export function RegisterForm() {
   const [state, action, pending] = useActionState(registerAction, undefined)
-  // Losowane wyłącznie po stronie klienta - inicjalny stan musi być identyczny
-  // na serwerze i kliencie, żeby uniknąć błędu hydracji.
-  const [peselPositions, setPeselPositions] = useState<number[]>([])
-  const peselInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
   // Zmienia się po każdej nieudanej próbie wysłania formularza - używana jako
   // `key` pól, żeby wymusić ich remount z nowym `defaultValue` (odtworzenie
   // wpisanych wartości) oraz całkowite odświeżenie boxów PESEL (nowy układ,
@@ -31,21 +27,13 @@ export function RegisterForm() {
   const [attempt, setAttempt] = useState(0)
   const [prevState, setPrevState] = useState(state)
 
-  useEffect(() => {
-    // Celowo: to jedyny sposób na wylosowanie pozycji po stronie klienta bez
-    // rozjazdu SSR/hydracji (losowość nie może wystąpić podczas renderu).
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPeselPositions(pickRandomPeselPositions())
-  }, [])
-
-  // Aktualizacja podczas renderu (a nie w efekcie) - dzięki temu `attempt` i
-  // nowy układ PESEL zmieniają się w tym samym przebiegu renderu co nowy
-  // `defaultValue` z akcji, bez pośredniej klatki z tym samym `key`, ale innym
-  // `defaultValue` (co Base UI zgłaszałoby jako błąd).
+  // Aktualizacja podczas renderu (a nie w efekcie) - dzięki temu `attempt`
+  // zmienia się w tym samym przebiegu renderu co nowy `defaultValue` z akcji,
+  // bez pośredniej klatki z tym samym `key`, ale innym `defaultValue` (co
+  // Base UI zgłaszałoby jako błąd).
   if (state !== prevState) {
     setPrevState(state)
     setAttempt((a) => a + 1)
-    setPeselPositions(pickRandomPeselPositions())
   }
 
   if (state?.success) {
@@ -186,60 +174,7 @@ export function RegisterForm() {
             Numer PESEL - wskazane cyfry
             <RequiredMark />
           </Label>
-          <div className="flex flex-nowrap gap-0.5 sm:gap-1">
-            {Array.from({ length: PESEL_LENGTH }, (_, i) => {
-              const isActive = peselPositions.includes(i)
-
-              return (
-                <div key={i} className="flex flex-col items-center gap-0.5">
-                  <span className="text-[9px] text-muted-foreground">
-                    {i + 1}
-                  </span>
-                  {isActive ? (
-                    <>
-                      <input type="hidden" name="peselPositions" value={i} />
-                      <Input
-                        key={attempt}
-                        ref={(el) => {
-                          peselInputRefs.current[i] = el
-                        }}
-                        name={`peselDigit-${i}`}
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]"
-                        maxLength={1}
-                        autoComplete="off"
-                        required
-                        className="h-9 w-6 px-0 text-center tabular-nums"
-                        onChange={(e) => {
-                          const value = e.target.value
-                            .replace(/[^0-9]/g, '')
-                            .slice(0, 1)
-                          e.target.value = value
-
-                          if (value) {
-                            const currentIndex = peselPositions.indexOf(i)
-                            const nextPosition =
-                              peselPositions[
-                                (currentIndex + 1) % peselPositions.length
-                              ]
-                            peselInputRefs.current[nextPosition]?.select()
-                          }
-                        }}
-                      />
-                    </>
-                  ) : (
-                    <div
-                      aria-hidden
-                      className="flex h-9 w-6 items-center justify-center rounded-lg border border-input bg-input/30 text-muted-foreground"
-                    >
-                      •
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+          <PeselDigitInputs resetToken={attempt} />
           {state?.errors?.peselDigits && (
             <p className="text-sm text-destructive">
               {state.errors.peselDigits[0]}
