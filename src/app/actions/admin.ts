@@ -9,7 +9,6 @@ import {
   sendAccountActivatedEmail,
   sendAccountStatusChangeAdminNotification,
 } from '@/lib/mailer'
-import { tryLinkUserToResult } from '@/lib/results-matching'
 import { getNotificationEmails } from '@/lib/settings'
 import { roleLabels } from '@/lib/labels'
 import {
@@ -28,11 +27,6 @@ async function loadTarget(userId: string) {
       email: true,
       role: true,
       status: true,
-      firstName: true,
-      lastName: true,
-      peselPositions: true,
-      peselDigits: true,
-      resultId: true,
     },
   })
 }
@@ -95,16 +89,6 @@ export async function setAccountStatusAction(
 
     if (nextStatus === AccountStatus.ACTIVE) {
       await sendAccountActivatedEmail(target.email)
-
-      // Automatyczne powiązanie z wynikiem egzaminu próbujemy dopiero po pełnej
-      // finalizacji zakładania konta (e-mail potwierdzony + akceptacja admina),
-      // nie przy ponownej aktywacji wcześniej dezaktywowanego konta.
-      if (
-        target.status === AccountStatus.PENDING_APPROVAL &&
-        !target.resultId
-      ) {
-        await tryLinkUserToResult(target)
-      }
     }
 
     const notificationEmails = await getNotificationEmails()

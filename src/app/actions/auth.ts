@@ -21,6 +21,7 @@ import {
   sendPendingApprovalNotification,
   sendVerificationEmail,
 } from '@/lib/mailer'
+import { tryLinkUserToResult } from '@/lib/results-matching'
 import { getMaintenanceMode, getNotificationEmails } from '@/lib/settings'
 import { AccountStatus, Role } from '@/generated/prisma/enums'
 
@@ -219,6 +220,11 @@ export async function verifyEmailAction(token: string) {
       }),
       prisma.verificationToken.delete({ where: { id: record.id } }),
     ])
+
+    // Pierwszą próbę automatycznego dopasowania do wyniku egzaminu
+    // podejmujemy od razu po potwierdzeniu adresu e-mail - nie trzeba już na
+    // nią czekać do akceptacji konta przez administratora.
+    await tryLinkUserToResult(verifiedUser)
 
     const notificationEmails = await getNotificationEmails()
     await sendPendingApprovalNotification(
