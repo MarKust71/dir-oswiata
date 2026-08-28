@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 
 import { canManageAccount } from '@/lib/permissions'
 import { roleLabels, statusLabels } from '@/lib/labels'
@@ -62,6 +63,41 @@ function searchIndex(user: {
     .join('')
     .replace(/\s+/g, '')
     .toLowerCase()
+}
+
+type SortColumn = 'email' | 'name'
+type SortDirection = 'asc' | 'desc'
+
+function SortableHeader({
+  label,
+  column,
+  sortColumn,
+  sortDirection,
+  onSort,
+}: {
+  label: string
+  column: SortColumn
+  sortColumn: SortColumn | null
+  sortDirection: SortDirection
+  onSort: (column: SortColumn) => void
+}) {
+  const isActive = sortColumn === column
+  const Icon = isActive
+    ? sortDirection === 'asc'
+      ? ArrowUp
+      : ArrowDown
+    : ArrowUpDown
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(column)}
+      className="flex items-center gap-1 hover:text-foreground"
+    >
+      {label}
+      <Icon className={`size-3.5 ${isActive ? '' : 'text-muted-foreground'}`} />
+    </button>
+  )
 }
 
 type ResultSummary = {
@@ -145,11 +181,37 @@ export function AccountsTable({
   filters: ReactNode
 }) {
   const [query, setQuery] = useState('')
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+
+  function toggleSort(column: SortColumn) {
+    if (sortColumn !== column) {
+      setSortColumn(column)
+      setSortDirection('asc')
+    } else if (sortDirection === 'asc') {
+      setSortDirection('desc')
+    } else {
+      setSortColumn(null)
+    }
+  }
 
   const normalizedQuery = query.replace(/\s+/g, '').toLowerCase()
   const filteredUsers = normalizedQuery
     ? users.filter((user) => searchIndex(user).includes(normalizedQuery))
     : users
+
+  // Sortowanie po stronie klienta - dotyczy tylko widoku, kolejność z serwera
+  // (po e-mailu) wraca po trzecim kliknięciu tego samego nagłówka.
+  const sortedUsers = sortColumn
+    ? [...filteredUsers].sort((a, b) => {
+        const comparison =
+          sortColumn === 'email'
+            ? a.email.localeCompare(b.email, 'pl')
+            : fullName(a).localeCompare(fullName(b), 'pl')
+
+        return sortDirection === 'asc' ? comparison : -comparison
+      })
+    : filteredUsers
 
   return (
     <div className="flex flex-col gap-6">
@@ -179,8 +241,24 @@ export function AccountsTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>E-mail</TableHead>
-                <TableHead>Imię i nazwisko</TableHead>
+                <TableHead>
+                  <SortableHeader
+                    label="E-mail"
+                    column="email"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={toggleSort}
+                  />
+                </TableHead>
+                <TableHead>
+                  <SortableHeader
+                    label="Imię i nazwisko"
+                    column="name"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={toggleSort}
+                  />
+                </TableHead>
                 <TableHead>Wynik</TableHead>
                 <TableHead>Rola</TableHead>
                 <TableHead>Status</TableHead>
@@ -189,7 +267,7 @@ export function AccountsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => {
+              {sortedUsers.map((user) => {
                 const canManage =
                   user.id !== actorId &&
                   canManageAccount({ role: actorRole }, user)
@@ -234,7 +312,7 @@ export function AccountsTable({
 
       {/* Mobile: karty */}
       <div className="flex flex-col gap-3 md:hidden">
-        {filteredUsers.map((user) => {
+        {sortedUsers.map((user) => {
           const canManage =
             user.id !== actorId && canManageAccount({ role: actorRole }, user)
 
