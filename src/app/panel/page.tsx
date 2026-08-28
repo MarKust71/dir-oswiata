@@ -1,10 +1,12 @@
 import { requireUser } from '@/lib/dal'
 import { getResultsVisibleFrom, getResultsVisibleUntil } from '@/lib/settings'
 import { notifyMissingResultIfNeeded } from '@/lib/missing-result-notification'
+import { tryLinkUserToResult } from '@/lib/results-matching'
 import { Role } from '@/generated/prisma/enums'
 import { PeselBoxes } from '@/components/pesel-boxes'
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -12,6 +14,7 @@ import {
 } from '@/components/ui/card'
 
 import { ApplicationNumberForm } from './application-number-form'
+import { EditProfileDialog } from './edit-profile-dialog'
 
 const availabilityDateFormatter = new Intl.DateTimeFormat('pl-PL', {
   day: 'numeric',
@@ -36,6 +39,20 @@ export default async function PanelPage() {
 
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
 
+  // Dane mogły zostać właśnie poprawione w panelu (zob. edit-profile-dialog.tsx) -
+  // dopiero po ich zapisaniu i pokazaniu w panelu sprawdzamy, czy na ich
+  // podstawie można teraz powiązać konto z wynikiem egzaminu.
+  let hasResult = user.resultId !== null
+  if (user.role === Role.STUDENT && !hasResult) {
+    hasResult = await tryLinkUserToResult({
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      peselPositions: user.peselPositions,
+      peselDigits: user.peselDigits,
+    })
+  }
+
   const [resultsVisibleFrom, resultsVisibleUntil] =
     user.role === Role.STUDENT
       ? await Promise.all([getResultsVisibleFrom(), getResultsVisibleUntil()])
@@ -51,9 +68,9 @@ export default async function PanelPage() {
     now >= resultsVisibleFrom &&
     now <= resultsVisibleUntil
   )
-  const needsApplicationNumberVerification =
-    isWithinResultsWindow && user.resultId !== null
-  const resultsNotYetAvailable = isWithinResultsWindow && user.resultId === null
+  const needsApplicationNumberVerification = isWithinResultsWindow && hasResult
+  const resultsNotYetAvailable = isWithinResultsWindow && !hasResult
+  const canEditProfile = user.role === Role.STUDENT && !hasResult
 
   if (resultsNotYetAvailable) {
     await notifyMissingResultIfNeeded({
@@ -71,6 +88,15 @@ export default async function PanelPage() {
             Witaj{fullName ? `, ${fullName}` : ''}!
           </CardTitle>
           <CardDescription>Twoje konto</CardDescription>
+          {canEditProfile && (
+            <CardAction>
+              <EditProfileDialog
+                firstName={user.firstName}
+                lastName={user.lastName}
+                phone={user.phone}
+              />
+            </CardAction>
+          )}
         </CardHeader>
         <CardContent className="flex flex-col gap-3 text-sm">
           <div className="flex justify-between gap-4">
@@ -103,24 +129,36 @@ export default async function PanelPage() {
               <p className="rounded-md bg-muted p-3 text-muted-foreground">
                 {formatResultsAvailabilityMessage(resultsVisibleFrom)}
               </p>
-              <p
-                className={
-                  user.resultId !== null
-                    ? 'font-medium text-green-600 dark:text-green-400'
-                    : 'font-medium text-destructive'
-                }
-              >
-                {user.resultId !== null
-                  ? 'Twoje wyniki czekają na udostępnienie'
-                  : 'Twoje wyniki nie są jeszcze przygotowane'}
-              </p>
+              {hasResult ? (
+                <p className="font-medium text-green-600 dark:text-green-400">
+                  Twoje wyniki czekają na udostępnienie
+                </p>
+              ) : (
+                <>
+                  <p className="font-medium text-destructive">
+                    Twoje wyniki nie są jeszcze dostępne.
+                  </p>
+                  <p className="font-medium text-destructive">
+                    Powodem mogą być różnice w imieniu lub nazwisko w stosunku
+                    do protokołu egzaminu lub błędnie podane cyfry numeru PESEL.
+                  </p>
+                </>
+              )}
             </>
           )}
           {resultsNotYetAvailable && (
-            <p className="font-medium text-destructive">
-              Twoje wyniki nie są jeszcze przygotowane. Powiadomiliśmy o tym
-              administratora.
-            </p>
+            <>
+              <p className="font-medium text-destructive">
+                Twoje wyniki nie są jeszcze dostępne.
+              </p>
+              <p className="font-medium text-destructive">
+                Powodem mogą być różnice w imieniu lub nazwisko w stosunku do
+                protokołu egzaminu lub błędnie podane cyfry numeru PESEL.{' '}
+              </p>
+              <p className="font-medium text-destructive">
+                Powiadomiliśmy o tym administratora.
+              </p>
+            </>
           )}
           {needsApplicationNumberVerification && <ApplicationNumberForm />}
         </CardContent>
