@@ -1,9 +1,15 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
+import { deleteSession } from '@/lib/session'
+import { getNotificationEmails } from '@/lib/settings'
+import {
+  sendProfileCorrectionAdminNotification,
+  sendProfileCorrectionUserEmail,
+} from '@/lib/mailer'
 import {
   ProfileCorrectionSchema,
   type ProfileCorrectionFormState,
@@ -12,7 +18,7 @@ import {
   DB_CONNECTION_ERROR_MESSAGE,
   isDatabaseConnectionError,
 } from '@/lib/db-error'
-import { Role } from '@/generated/prisma/enums'
+import { AccountStatus, Role } from '@/generated/prisma/enums'
 
 export async function updateProfileAction(
   _state: ProfileCorrectionFormState,
@@ -46,10 +52,11 @@ export async function updateProfileAction(
   const { firstName, lastName, phone } = validated.data
 
   try {
-    // Zerujemy powiązanie z wynikiem - próbę ponownego dopasowania na
-    // podstawie nowych danych podejmuje dopiero panel przy najbliższym
-    // wejściu (zob. src/app/panel/page.tsx), już po pokazaniu zapisanych
-    // zmian.
+    // Poprawa danych mogła zmienić okoliczności dopasowania do wyniku
+    // egzaminu - konto wraca więc do stanu wymagającego ponownej weryfikacji
+    // i aktywacji przez administratora, tak jak nowo zarejestrowane konto.
+    // Ponowną próbę automatycznego dopasowania podejmuje panel dopiero po
+    // kolejnej aktywacji (zob. src/app/panel/page.tsx).
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -59,16 +66,22 @@ export async function updateProfileAction(
         peselPositions: validated.data.peselPositions,
         peselDigits: validated.data.peselDigits,
         resultId: null,
+        status: AccountStatus.DISABLED,
       },
     })
 
-    revalidatePath('/panel')
-
-    return { success: true, message: 'Zapisano dane.' }
+    const adminEmails = await getNotificationEmails()
+    await Promise.all([
+      sendProfileCorrectionAdminNotification(adminEmails, user.email),
+      sendProfileCorrectionUserEmail(user.email),
+    ])
   } catch (error) {
     if (isDatabaseConnectionError(error)) {
       return { message: DB_CONNECTION_ERROR_MESSAGE, values }
     }
     throw error
   }
+
+  await deleteSession()
+  redirect('/login?reason=profile-correction')
 }

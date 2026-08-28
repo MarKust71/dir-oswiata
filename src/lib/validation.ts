@@ -82,7 +82,6 @@ export type ProfileCorrectionFormState =
         peselDigits?: string[]
       }
       message?: string
-      success?: boolean
       // Wartości wprowadzone przez użytkownika, zwracane po nieudanej próbie,
       // żeby formularz mógł je przywrócić (poza boxami PESEL).
       values?: {

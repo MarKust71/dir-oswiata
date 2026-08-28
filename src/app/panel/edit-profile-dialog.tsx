@@ -30,28 +30,21 @@ export function EditProfileDialog({
     updateProfileAction,
     undefined
   )
-  const [open, setOpen] = useState(false)
   // Zmienia się po każdej nieudanej próbie wysłania formularza - używana jako
   // `key` pól, żeby wymusić ich remount z nowym `defaultValue` (odtworzenie
   // wpisanych wartości) oraz odświeżenie boxów PESEL (nowy układ, wyczyszczone
-  // cyfry).
+  // cyfry). Udany zapis nie zwraca stanu - przekierowuje od razu na stronę
+  // logowania (zob. src/app/actions/profile.ts).
   const [attempt, setAttempt] = useState(0)
   const [prevState, setPrevState] = useState(state)
 
   if (state !== prevState) {
     setPrevState(state)
-    if (state?.success) {
-      // Modal zamyka się od razu po zapisie - dopiero po powrocie do panelu,
-      // z pokazanymi już zaktualizowanymi danymi, sprawdzane jest dopasowanie
-      // do wyniku (zob. src/app/panel/page.tsx).
-      setOpen(false)
-    } else {
-      setAttempt((a) => a + 1)
-    }
+    setAttempt((a) => a + 1)
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog>
       <DialogTrigger render={<Button variant="ghost" size="icon-sm" />}>
         <PencilIcon />
         <span className="sr-only">Edytuj dane konta</span>
@@ -61,7 +54,9 @@ export function EditProfileDialog({
           <DialogTitle>Popraw dane konta</DialogTitle>
           <DialogDescription>
             Popraw imię, nazwisko, telefon lub cyfry numeru PESEL, jeśli różnią
-            się od danych z protokołu egzaminu.
+            się od danych z protokołu egzaminu. Po zapisaniu danych zostaniesz
+            wylogowany, a konto będzie wymagać ponownej aktywacji przez
+            administratora.
           </DialogDescription>
         </DialogHeader>
 
@@ -136,15 +131,7 @@ export function EditProfileDialog({
           </div>
 
           {state?.message && (
-            <p
-              className={
-                state.success
-                  ? 'text-sm text-muted-foreground'
-                  : 'text-sm text-destructive'
-              }
-            >
-              {state.message}
-            </p>
+            <p className="text-sm text-destructive">{state.message}</p>
           )}
 
           <Button type="submit" disabled={pending} className="w-full">

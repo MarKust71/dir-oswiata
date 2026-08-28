@@ -376,6 +376,83 @@ export async function sendMissingResultAdminNotification(
   )
 }
 
+export async function sendProfileCorrectionAdminNotification(
+  adminEmails: string[],
+  userEmail: string
+) {
+  if (adminEmails.length === 0) return
+
+  const message = `Użytkownik "${userEmail}" poprawił w panelu swoje dane (imię, nazwisko, telefon lub cyfry numeru PESEL). Konto zostało tymczasowo dezaktywowane i wymaga ponownej weryfikacji oraz aktywacji.`
+  const text = withFooter(message)
+  const html = withFooterHtml(`<p>${message}</p>`)
+  const transporter = getTransporter()
+
+  if (!transporter) {
+    console.warn(
+      `[mailer] SMTP nie jest skonfigurowany. Powiadomienie: ${text}`
+    )
+
+    return
+  }
+
+  await Promise.all(
+    adminEmails.map(async (to) => {
+      try {
+        const info = await transporter.sendMail({
+          from: SMTP_FROM || SMTP_USER,
+          to,
+          subject: 'Konto użytkownika wymaga ponownej aktywacji',
+          text,
+          html,
+        })
+
+        console.log(
+          `[mailer] Wysłano powiadomienie o poprawie danych konta do ${to} (messageId: ${info.messageId}, response: ${info.response})`
+        )
+      } catch (error) {
+        console.error(
+          `[mailer] Nie udało się wysłać powiadomienia o poprawie danych konta do ${to}:`,
+          error
+        )
+      }
+    })
+  )
+}
+
+export async function sendProfileCorrectionUserEmail(email: string) {
+  const text = withFooter(
+    'Zapisaliśmy Twoje poprawione dane. Ze względów bezpieczeństwa Twoje konto zostało tymczasowo dezaktywowane i wymaga ponownej aktywacji przez administratora. Poinformujemy Cię osobnym e-mailem, gdy konto zostanie ponownie aktywowane.'
+  )
+  const transporter = getTransporter()
+
+  if (!transporter) {
+    console.warn(`[mailer] SMTP nie jest skonfigurowany. ${text}`)
+
+    return
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from: SMTP_FROM || SMTP_USER,
+      to: email,
+      subject: 'Twoje konto wymaga ponownej aktywacji',
+      text,
+      html: withFooterHtml(
+        '<p>Zapisaliśmy Twoje poprawione dane. Ze względów bezpieczeństwa Twoje konto zostało tymczasowo dezaktywowane i wymaga ponownej aktywacji przez administratora.</p><p>Poinformujemy Cię osobnym e-mailem, gdy konto zostanie ponownie aktywowane.</p>'
+      ),
+    })
+
+    console.log(
+      `[mailer] Wysłano mail o dezaktywacji po poprawie danych do ${email} (messageId: ${info.messageId}, response: ${info.response})`
+    )
+  } catch (error) {
+    console.error(
+      `[mailer] Nie udało się wysłać maila o dezaktywacji po poprawie danych do ${email}:`,
+      error
+    )
+  }
+}
+
 export async function sendResultsViewLimitReachedUserEmail(email: string) {
   const text = withFooter(
     'Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.'
