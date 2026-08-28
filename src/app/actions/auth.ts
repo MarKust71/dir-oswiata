@@ -42,6 +42,13 @@ export async function registerAction(
   _state: RegisterFormState,
   formData: FormData
 ): Promise<RegisterFormState> {
+  if (await getMaintenanceMode()) {
+    return {
+      message:
+        'Przerwa konserwacyjna. Rejestracja nowych kont jest chwilowo niedostępna.',
+    }
+  }
+
   const peselPositions = formData.getAll('peselPositions').map(Number)
   const peselDigits = peselPositions.map((pos) =>
     String(formData.get(`peselDigit-${pos}`) ?? '')
