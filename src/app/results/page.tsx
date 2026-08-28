@@ -8,7 +8,7 @@ export default async function ResultsPage() {
   await requireRole([Role.ADMIN, Role.USER])
 
   const results = await prisma.results.findMany({
-    orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+    orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
     select: {
       id: true,
       firstName: true,

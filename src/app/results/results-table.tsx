@@ -34,10 +34,10 @@ export type ResultRow = {
   applicationNumber: string
 }
 
-// Klucz do wyszukiwania - nazwisko i imię połączone bez spacji, żeby np.
-// "kowalskijan" pasowało do "Kowalski Jan".
+// Klucz do wyszukiwania - imię i nazwisko połączone bez spacji, żeby np.
+// "jankowalski" pasowało do "Jan Kowalski".
 function searchKey(result: { firstName: string; lastName: string }) {
-  return `${result.lastName}${result.firstName}`
+  return `${result.firstName}${result.lastName}`
     .replace(/\s+/g, '')
     .toLowerCase()
 }
