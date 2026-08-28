@@ -30,6 +30,7 @@ export async function relinkResultsAction(
 
     revalidatePath('/settings')
     revalidatePath('/panel')
+    revalidatePath('/dashboard')
 
     return {
       message: `Zakończono. Nowo powiązane: ${linkedCount}, rozłączone (niepasujące): ${unlinkedCount}, niezmienione poprawne powiązania: ${unchangedCount}.`,
