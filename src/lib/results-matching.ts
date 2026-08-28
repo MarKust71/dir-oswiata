@@ -70,15 +70,16 @@ export async function tryLinkUserToResult(user: LinkableUser) {
 }
 
 /**
- * Przegląda wszystkie konta STUDENT: dla niepowiązanych próbuje znaleźć
- * pasujący wynik (jak przy aktywacji konta), a dla już powiązanych weryfikuje,
- * czy istniejące powiązanie nadal jest poprawne - jeśli dane konta (imię,
- * nazwisko, maska PESEL) przestały pasować do przypisanego wyniku (np. po
- * korekcie danych konta), powiązanie jest usuwane. Wywoływane automatycznie po
- * imporcie wyników (poprzednie powiązania są wtedy już wyzerowane kaskadowo
- * przez ON DELETE SET NULL) oraz ręcznie z panelu Ustawienia. Zwraca liczby:
- * nowo powiązanych, rozłączonych (niepasujących już) i niezmienionych
- * poprawnych powiązań.
+ * Przegląda wszystkie konta STUDENT, niezależnie od statusu: dla
+ * niepowiązanych próbuje znaleźć pasujący wynik (jak przy potwierdzeniu
+ * adresu e-mail), a dla już powiązanych weryfikuje, czy istniejące
+ * powiązanie nadal jest poprawne - jeśli dane konta (imię, nazwisko, maska
+ * PESEL) przestały pasować do przypisanego wyniku (np. po korekcie danych
+ * konta), powiązanie jest usuwane. Wywoływane automatycznie po imporcie
+ * wyników (poprzednie powiązania są wtedy już wyzerowane kaskadowo przez ON
+ * DELETE SET NULL) oraz ręcznie z panelu Ustawienia. Zwraca liczby: nowo
+ * powiązanych, rozłączonych (niepasujących już) i niezmienionych poprawnych
+ * powiązań.
  */
 export async function relinkAllStudentsToResults() {
   const students = await prisma.user.findMany({
