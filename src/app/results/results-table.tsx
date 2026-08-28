@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 import { ResultDetailsButton } from '@/components/result-details'
+import { PESEL_LENGTH } from '@/lib/pesel'
 import {
   Card,
   CardContent,
@@ -42,19 +43,43 @@ function searchKey(result: { firstName: string; lastName: string }) {
     .toLowerCase()
 }
 
+// Rozpoznaje wklejoną maskę PESEL (np. "• • • • • • 1 • • 3 0", ze spacjami
+// lub bez) - zwraca znane cyfry na swoich pozycjach (`null` dla "•"), albo
+// `null`, jeśli tekst nie jest maską o poprawnej długości.
+function parsePeselMask(query: string): (string | null)[] | null {
+  const compact = query.replace(/\s+/g, '')
+  if (compact.length !== PESEL_LENGTH) return null
+  if (![...compact].every((char) => char === '•' || /[0-9]/.test(char))) {
+    return null
+  }
+
+  return [...compact].map((char) => (char === '•' ? null : char))
+}
+
+function matchesPeselMask(pesel: string, mask: (string | null)[]) {
+  return mask.every((digit, i) => digit === null || pesel[i] === digit)
+}
+
 export function ResultsTable({ results }: { results: ResultRow[] }) {
   const [query, setQuery] = useState('')
 
+  const trimmedQuery = query.trim()
+  const peselMask = trimmedQuery.includes('•')
+    ? parsePeselMask(trimmedQuery)
+    : null
   const normalizedQuery = query.replace(/\s+/g, '').toLowerCase()
-  const filteredResults = normalizedQuery
-    ? results.filter((result) => searchKey(result).includes(normalizedQuery))
-    : results
+
+  const filteredResults = peselMask
+    ? results.filter((result) => matchesPeselMask(result.pesel, peselMask))
+    : normalizedQuery
+      ? results.filter((result) => searchKey(result).includes(normalizedQuery))
+      : results
 
   return (
     <div className="flex flex-col gap-4">
       <Input
         type="search"
-        placeholder="Szukaj po nazwisku i imieniu…"
+        placeholder="Szukaj po nazwisku i imieniu lub wklej maskę PESEL…"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         className="max-w-sm"
