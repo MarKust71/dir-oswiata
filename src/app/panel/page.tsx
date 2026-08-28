@@ -1,5 +1,4 @@
 import { requireUser } from '@/lib/dal'
-import { roleLabels } from '@/lib/labels'
 import { getResultsVisibleFrom, getResultsVisibleUntil } from '@/lib/settings'
 import { notifyMissingResultIfNeeded } from '@/lib/missing-result-notification'
 import { Role } from '@/generated/prisma/enums'
@@ -84,15 +83,11 @@ export default async function PanelPage() {
             <span className="text-muted-foreground">Imię i nazwisko</span>
             <span className="text-right font-medium">{fullName || '—'}</span>
           </div>
-          {user.phone && (
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Telefon</span>
-              <span className="text-right font-medium">{user.phone}</span>
-            </div>
-          )}
           <div className="flex justify-between gap-4">
-            <span className="text-muted-foreground">Rola</span>
-            <span className="font-medium">{roleLabels[user.role]}</span>
+            <span className="text-muted-foreground">Telefon</span>
+            <span className="text-right font-medium">
+              {user.phone || '(nie podano)'}
+            </span>
           </div>
           <div className="flex flex-col gap-1.5">
             <span className="text-muted-foreground">
