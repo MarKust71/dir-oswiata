@@ -66,7 +66,7 @@ export function ResultsTable({ results }: { results: ResultRow[] }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nazwisko i imię</TableHead>
+                <TableHead>Imię i nazwisko</TableHead>
                 <TableHead>PESEL</TableHead>
                 <TableHead>Zawód</TableHead>
                 <TableHead>Nr wniosku</TableHead>
@@ -77,7 +77,7 @@ export function ResultsTable({ results }: { results: ResultRow[] }) {
               {filteredResults.map((result) => (
                 <TableRow key={result.id}>
                   <TableCell className="font-medium">
-                    {result.lastName} {result.firstName}
+                    {result.firstName} {result.lastName}
                   </TableCell>
                   <TableCell className="font-mono">{result.pesel}</TableCell>
                   <TableCell>{result.profession}</TableCell>
