@@ -17,6 +17,15 @@ type LinkedResult = {
   pesel: string
 }
 
+// Porównanie imienia/nazwiska bez względu na wielkość liter - dane w tabeli
+// wyników pochodzą z importu .xlsx i mogą różnić się wielkością liter od
+// tego, co użytkownik podał przy rejestracji.
+function namesMatch(userValue: string | null, resultValue: string) {
+  return (
+    userValue !== null && userValue.toLowerCase() === resultValue.toLowerCase()
+  )
+}
+
 /**
  * Sprawdza, czy dany rekord wyniku pasuje do konta po imieniu, nazwisku i
  * cyfrach numeru PESEL ujawnionych przy rejestracji (positions/digits -
@@ -24,8 +33,8 @@ type LinkedResult = {
  */
 function resultMatchesUser(user: LinkableUser, result: LinkedResult) {
   return (
-    user.firstName === result.firstName &&
-    user.lastName === result.lastName &&
+    namesMatch(user.firstName, result.firstName) &&
+    namesMatch(user.lastName, result.lastName) &&
     user.peselPositions.length > 0 &&
     user.peselPositions.every(
       (position, i) => result.pesel[position] === user.peselDigits[i]
@@ -48,8 +57,8 @@ export async function tryLinkUserToResult(user: LinkableUser) {
 
   const candidates = await prisma.results.findMany({
     where: {
-      firstName: user.firstName,
-      lastName: user.lastName,
+      firstName: { equals: user.firstName, mode: 'insensitive' },
+      lastName: { equals: user.lastName, mode: 'insensitive' },
       user: null,
     },
     select: { id: true, firstName: true, lastName: true, pesel: true },
