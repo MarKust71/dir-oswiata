@@ -7,6 +7,7 @@ import {
   ArrowUpDown,
   CircleCheck,
   CircleX,
+  Info,
 } from 'lucide-react'
 
 import { canManageAccount } from '@/lib/permissions'
@@ -30,6 +31,11 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { ResultDetailsButton } from '@/components/result-details'
 
 import { AccountActions } from './account-actions'
@@ -283,7 +289,17 @@ export function AccountsTable({
                   />
                 </TableHead>
                 <TableHead>Wynik</TableHead>
-                <TableHead title="Widział wynik">W.w.</TableHead>
+                <TableHead>
+                  W.w.
+                  <sup>
+                    <Tooltip>
+                      <TooltipTrigger aria-label="Widział wynik">
+                        <Info className="size-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>Widział wynik</TooltipContent>
+                    </Tooltip>
+                  </sup>
+                </TableHead>
                 <TableHead>Rola</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Rejestracja</TableHead>
