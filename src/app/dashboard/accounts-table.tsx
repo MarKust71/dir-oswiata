@@ -1,7 +1,13 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  CircleCheck,
+  CircleX,
+} from 'lucide-react'
 
 import { canManageAccount } from '@/lib/permissions'
 import { roleLabels, statusLabels } from '@/lib/labels'
@@ -135,6 +141,22 @@ function ResultCell({
   )
 }
 
+function ViewedResultCell({
+  role,
+  resultsViewCount,
+}: {
+  role: Role
+  resultsViewCount: number
+}) {
+  if (role !== Role.STUDENT) return null
+
+  return resultsViewCount > 0 ? (
+    <CircleCheck className="size-4 text-green-600" />
+  ) : (
+    <CircleX className="size-4 text-destructive" />
+  )
+}
+
 export type AccountRow = {
   id: string
   email: string
@@ -146,6 +168,7 @@ export type AccountRow = {
   phone: string | null
   peselPositions: number[]
   peselDigits: string[]
+  resultsViewCount: number
   result: ResultSummary | null
 }
 
@@ -260,6 +283,7 @@ export function AccountsTable({
                   />
                 </TableHead>
                 <TableHead>Wynik</TableHead>
+                <TableHead title="Widział wynik">W.w.</TableHead>
                 <TableHead>Rola</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Rejestracja</TableHead>
@@ -280,6 +304,12 @@ export function AccountsTable({
                     </TableCell>
                     <TableCell>
                       <ResultCell role={user.role} result={user.result} />
+                    </TableCell>
+                    <TableCell>
+                      <ViewedResultCell
+                        role={user.role}
+                        resultsViewCount={user.resultsViewCount}
+                      />
                     </TableCell>
                     <TableCell>{roleLabels[user.role]}</TableCell>
                     <TableCell>
@@ -360,6 +390,17 @@ export function AccountsTable({
                     <div className="flex justify-between gap-4">
                       <span className="text-muted-foreground">Wynik</span>
                       <ResultCell role={user.role} result={user.result} />
+                    </div>
+                  )}
+                  {user.role === Role.STUDENT && (
+                    <div className="flex justify-between gap-4">
+                      <span className="text-muted-foreground">
+                        Widział wynik
+                      </span>
+                      <ViewedResultCell
+                        role={user.role}
+                        resultsViewCount={user.resultsViewCount}
+                      />
                     </div>
                   )}
                 </div>

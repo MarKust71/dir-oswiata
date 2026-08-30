@@ -55,6 +55,7 @@ export default async function DashboardPage(props: PageProps<'/dashboard'>) {
       phone: true,
       peselPositions: true,
       peselDigits: true,
+      resultsViewCount: true,
       result: {
         select: {
           firstName: true,
