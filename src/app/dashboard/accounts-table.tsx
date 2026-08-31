@@ -475,6 +475,7 @@ export function AccountsTable({
                         disableActivateFromPendingEmail={
                           disableActivateFromPendingEmail
                         }
+                        resultsViewCount={user.resultsViewCount}
                         assignableRoles={assignableRoles}
                         layout="compact"
                       />
@@ -565,6 +566,7 @@ export function AccountsTable({
                   disableActivateFromPendingEmail={
                     disableActivateFromPendingEmail
                   }
+                  resultsViewCount={user.resultsViewCount}
                   assignableRoles={assignableRoles}
                 />
               </CardContent>

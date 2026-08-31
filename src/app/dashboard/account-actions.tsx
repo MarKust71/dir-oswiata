@@ -41,6 +41,10 @@ type AccountActionsProps = {
   // ucznia, dla którego nie znaleziono jeszcze wyniku (zob.
   // setAccountStatusAction) - kontrolka jest wtedy widoczna, ale wyłączona.
   disableActivateFromPendingEmail?: boolean
+  // Jeśli konto już wcześniej wyświetliło swój wynik (resultsViewCount > 0),
+  // ponowna aktywacja daje mu świeży komplet prób - wymaga dodatkowego
+  // potwierdzenia.
+  resultsViewCount?: number
   assignableRoles: Role[]
   // "compact" ustawia kontrolki jedna pod druga, żeby nie poszerzać kolumny
   // w tabeli desktopowej; "wide" (domyślnie) układa je obok siebie - używane
@@ -56,11 +60,13 @@ export function AccountActions({
   canManage,
   canDelete,
   disableActivateFromPendingEmail = false,
+  resultsViewCount = 0,
   assignableRoles,
   layout = 'wide',
 }: AccountActionsProps) {
   const [pending, startTransition] = useTransition()
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [activateConfirmOpen, setActivateConfirmOpen] = useState(false)
 
   function handleStatus(
     next: typeof AccountStatus.ACTIVE | typeof AccountStatus.DISABLED
@@ -70,6 +76,19 @@ export function AccountActions({
       if (res?.error) toast.error(res.error)
       else if (res?.message) toast.success(res.message)
     })
+  }
+
+  function handleActivateClick() {
+    if (resultsViewCount > 0) {
+      setActivateConfirmOpen(true)
+    } else {
+      handleStatus(AccountStatus.ACTIVE)
+    }
+  }
+
+  function handleActivateConfirm() {
+    setActivateConfirmOpen(false)
+    handleStatus(AccountStatus.ACTIVE)
   }
 
   function handleRole(next: Role | null) {
@@ -129,7 +148,7 @@ export function AccountActions({
                 ? 'Brak wyniku dla tego konta - aktywację z pominięciem linku może wykonać tylko administrator.'
                 : undefined
             }
-            onClick={() => handleStatus(AccountStatus.ACTIVE)}
+            onClick={handleActivateClick}
           >
             Aktywuj
           </Button>
@@ -154,11 +173,7 @@ export function AccountActions({
           </Button>
         )}
         {status === AccountStatus.DISABLED && (
-          <Button
-            size="sm"
-            disabled={pending}
-            onClick={() => handleStatus(AccountStatus.ACTIVE)}
-          >
+          <Button size="sm" disabled={pending} onClick={handleActivateClick}>
             Aktywuj
           </Button>
         )}
@@ -187,6 +202,27 @@ export function AccountActions({
           <AlertDialogFooter>
             <AlertDialogCancel>Anuluj</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete}>Usuń</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={activateConfirmOpen}
+        onOpenChange={setActivateConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ponowna aktywacja konta</AlertDialogTitle>
+            <AlertDialogDescription>
+              Wyniki tej osoby zostały już odczytane. Czy na pewno aktywować jej
+              konto ponownie?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction onClick={handleActivateConfirm}>
+              Aktywuj
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
