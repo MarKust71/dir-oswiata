@@ -5,9 +5,14 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
 import { deleteSession } from '@/lib/session'
-import { tryLinkUserToResult } from '@/lib/results-matching'
+import {
+  findAccountAlreadyLinkedToMatchingResult,
+  tryLinkUserToResult,
+} from '@/lib/results-matching'
 import { getNotificationEmails } from '@/lib/settings'
 import {
+  sendDuplicateResultProfileEditAttemptAdminNotification,
+  sendDuplicateResultProfileEditAttemptUserEmail,
   sendProfileCorrectionAdminNotification,
   sendProfileCorrectionUserEmail,
 } from '@/lib/mailer'
@@ -52,39 +57,74 @@ export async function updateProfileAction(
 
   const { firstName, lastName, phone } = validated.data
 
+  let linkedAccountEmail: string | null = null
+
   try {
-    // Poprawa danych mogła zmienić okoliczności dopasowania do wyniku
-    // egzaminu - konto wraca więc do stanu wymagającego ponownej weryfikacji
-    // i aktywacji przez administratora, tak jak nowo zarejestrowane konto.
-    // Próbę automatycznego dopasowania podejmujemy od razu (a nie dopiero po
-    // reaktywacji), żeby administrator widział na liście już aktualny wynik
-    // powiązania.
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
+    // Zanim zapiszemy poprawione dane, sprawdzamy, czy nie pasują już do
+    // wyniku przypisanego do innego, cudzego konta - w takim wypadku
+    // odrzucamy zmianę i blokujemy to konto zamiast próbować powiązania.
+    linkedAccountEmail = await findAccountAlreadyLinkedToMatchingResult(
+      {
         firstName,
         lastName,
-        phone: phone || null,
         peselPositions: validated.data.peselPositions,
         peselDigits: validated.data.peselDigits,
-        resultId: null,
-        status: AccountStatus.DISABLED,
       },
-    })
+      user.id
+    )
 
-    await tryLinkUserToResult({
-      id: user.id,
-      firstName,
-      lastName,
-      peselPositions: validated.data.peselPositions,
-      peselDigits: validated.data.peselDigits,
-    })
+    if (linkedAccountEmail) {
+      console.warn(
+        `[profile] Zablokowano konto (${user.email}) - poprawione dane pasują do wyniku już przypisanego do konta ${linkedAccountEmail}.`
+      )
 
-    const adminEmails = await getNotificationEmails()
-    await Promise.all([
-      sendProfileCorrectionAdminNotification(adminEmails, user.email),
-      sendProfileCorrectionUserEmail(user.email),
-    ])
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { status: AccountStatus.DISABLED },
+      })
+
+      await sendDuplicateResultProfileEditAttemptUserEmail(linkedAccountEmail)
+
+      const adminEmails = await getNotificationEmails()
+      await sendDuplicateResultProfileEditAttemptAdminNotification(
+        adminEmails,
+        linkedAccountEmail,
+        user.email
+      )
+    } else {
+      // Poprawa danych mogła zmienić okoliczności dopasowania do wyniku
+      // egzaminu - konto wraca więc do stanu wymagającego ponownej weryfikacji
+      // i aktywacji przez administratora, tak jak nowo zarejestrowane konto.
+      // Próbę automatycznego dopasowania podejmujemy od razu (a nie dopiero po
+      // reaktywacji), żeby administrator widział na liście już aktualny wynik
+      // powiązania.
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          firstName,
+          lastName,
+          phone: phone || null,
+          peselPositions: validated.data.peselPositions,
+          peselDigits: validated.data.peselDigits,
+          resultId: null,
+          status: AccountStatus.DISABLED,
+        },
+      })
+
+      await tryLinkUserToResult({
+        id: user.id,
+        firstName,
+        lastName,
+        peselPositions: validated.data.peselPositions,
+        peselDigits: validated.data.peselDigits,
+      })
+
+      const adminEmails = await getNotificationEmails()
+      await Promise.all([
+        sendProfileCorrectionAdminNotification(adminEmails, user.email),
+        sendProfileCorrectionUserEmail(user.email),
+      ])
+    }
   } catch (error) {
     if (isDatabaseConnectionError(error)) {
       return { message: DB_CONNECTION_ERROR_MESSAGE, values }
@@ -93,5 +133,9 @@ export async function updateProfileAction(
   }
 
   await deleteSession()
-  redirect('/login?reason=profile-correction')
+  redirect(
+    linkedAccountEmail
+      ? '/login?reason=duplicate-result-block'
+      : '/login?reason=profile-correction'
+  )
 }
