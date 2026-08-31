@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 import { requireRole } from '@/lib/dal'
 import {
   getInactivityTimeoutSeconds,
@@ -19,6 +21,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { buttonVariants } from '@/components/ui/button'
 
 import { NotificationEmailsForm } from './notification-emails-form'
 import { ImportResultsForm } from './import-results-form'
@@ -224,6 +227,25 @@ export default async function SettingsPage() {
                 initialEnabled={skipEmailVerificationEnabled}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle className="text-base">Dziennik zdarzeń</CardTitle>
+            <CardDescription>
+              Trwały zapis zdarzeń aplikacji (rejestracje, logowania, zmiany
+              statusów kont, wysyłki e-maili) - niezależny od dostarczalności
+              poczty i od ulotnych logów serwera.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col">
+            <Link
+              href="/settings/events"
+              className={buttonVariants({ variant: 'outline' })}
+            >
+              Zobacz dziennik zdarzeń
+            </Link>
           </CardContent>
         </Card>
       </div>
