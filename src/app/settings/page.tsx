@@ -7,6 +7,7 @@ import {
   getNotificationEmails,
   getResultsVisibleFrom,
   getResultsVisibleUntil,
+  getSkipEmailVerification,
 } from '@/lib/settings'
 import { toWarsawLocalDateTimeInputValue } from '@/lib/warsaw-time'
 import { Role } from '@/generated/prisma/enums'
@@ -17,6 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 
 import { NotificationEmailsForm } from './notification-emails-form'
 import { ImportResultsForm } from './import-results-form'
@@ -26,6 +28,7 @@ import { RelinkResultsForm } from './relink-results-form'
 import { InactivityTimeoutForm } from './inactivity-timeout-form'
 import { BackupForm } from './backup-form'
 import { MaintenanceModeForm } from './maintenance-mode-form'
+import { SkipEmailVerificationForm } from './skip-email-verification-form'
 
 export default async function SettingsPage() {
   await requireRole([Role.ADMIN])
@@ -38,6 +41,7 @@ export default async function SettingsPage() {
     maxResultsViewCount,
     inactivityTimeoutSeconds,
     maintenanceModeEnabled,
+    skipEmailVerificationEnabled,
   ] = await Promise.all([
     getResultsVisibleFrom(),
     getResultsVisibleUntil(),
@@ -45,6 +49,7 @@ export default async function SettingsPage() {
     getMaxResultsViewCount(),
     getInactivityTimeoutSeconds(),
     getMaintenanceMode(),
+    getSkipEmailVerification(),
   ])
 
   return (
@@ -188,15 +193,37 @@ export default async function SettingsPage() {
 
         <Card className="h-full">
           <CardHeader>
-            <CardTitle className="text-base">Przerwa konserwacyjna</CardTitle>
+            <CardTitle className="text-base">Przełączniki</CardTitle>
             <CardDescription>
-              Po włączeniu konta o roli Student nie mogą się zalogować, a na
-              stronie logowania oraz stronie głównej ukrywane są skróty do
-              rejestracji.
+              Globalne opcje włączane i wyłączane jednym przełącznikiem.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col">
-            <MaintenanceModeForm initialEnabled={maintenanceModeEnabled} />
+          <CardContent className="flex flex-1 flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium">Przerwa konserwacyjna</p>
+              <p className="text-sm text-muted-foreground">
+                Po włączeniu konta o roli Student nie mogą się zalogować, a na
+                stronie logowania oraz stronie głównej ukrywane są skróty do
+                rejestracji.
+              </p>
+              <MaintenanceModeForm initialEnabled={maintenanceModeEnabled} />
+            </div>
+
+            <Separator />
+
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium">
+                Pomijanie weryfikacji e-mail
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Po włączeniu nowo zarejestrowane konta pomijają potwierdzenie
+                adresu e-mail linkiem aktywacyjnym i trafiają od razu do stanu
+                oczekującego na akceptację administratora/pracownika.
+              </p>
+              <SkipEmailVerificationForm
+                initialEnabled={skipEmailVerificationEnabled}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
