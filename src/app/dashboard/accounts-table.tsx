@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useState, useTransition, type ReactNode } from 'react'
+import { toast } from 'sonner'
 import {
   ArrowDown,
   ArrowUp,
@@ -10,9 +11,11 @@ import {
   Info,
 } from 'lucide-react'
 
+import { resendVerificationEmailAction } from '@/app/actions/admin'
 import { canManageAccount } from '@/lib/permissions'
 import { roleLabels, statusLabels } from '@/lib/labels'
 import { maskPesel } from '@/lib/pesel'
+import { cn } from '@/lib/utils'
 import { AccountStatus, Role } from '@/generated/prisma/enums'
 import {
   Card,
@@ -36,6 +39,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { ResultDetailsButton } from '@/components/result-details'
 
 import { AccountActions } from './account-actions'
@@ -55,6 +68,79 @@ const dateFormatter = new Intl.DateTimeFormat('pl-PL', {
   timeStyle: 'medium',
   timeZone: 'Europe/Warsaw',
 })
+
+// Status "Oczekuje na e-mail" jest klikalny (dla osób z uprawnieniem do
+// zarządzania kontem) - pozwala ponownie wysłać link aktywacyjny bez
+// przechodzenia do osobnego widoku.
+function AccountStatusBadge({
+  userId,
+  status,
+  canManage,
+  className,
+}: {
+  userId: string
+  status: AccountStatus
+  canManage: boolean
+  className?: string
+}) {
+  const [pending, startTransition] = useTransition()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  if (status !== AccountStatus.PENDING_EMAIL || !canManage) {
+    return (
+      <Badge variant={STATUS_BADGE_VARIANT[status]} className={className}>
+        {statusLabels[status]}
+      </Badge>
+    )
+  }
+
+  function handleResend() {
+    setConfirmOpen(false)
+    startTransition(async () => {
+      const res = await resendVerificationEmailAction(userId)
+      if (res?.error) toast.error(res.error)
+      else if (res?.message) toast.success(res.message)
+    })
+  }
+
+  return (
+    <>
+      <Badge
+        variant={STATUS_BADGE_VARIANT[status]}
+        className={cn('cursor-pointer', className)}
+        role="button"
+        tabIndex={0}
+        aria-disabled={pending}
+        onClick={() => !pending && setConfirmOpen(true)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            if (!pending) setConfirmOpen(true)
+          }
+        }}
+      >
+        {statusLabels[status]}
+      </Badge>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Ponowna wysyłka linku aktywacyjnego
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Próbujesz ponownie wysłać link aktywacyjny. Kontynuować?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResend}>Wyślij</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
+}
 
 function fullName(user: { firstName: string | null; lastName: string | null }) {
   const name = [user.firstName, user.lastName].filter(Boolean).join(' ')
@@ -329,9 +415,11 @@ export function AccountsTable({
                     </TableCell>
                     <TableCell>{roleLabels[user.role]}</TableCell>
                     <TableCell>
-                      <Badge variant={STATUS_BADGE_VARIANT[user.status]}>
-                        {statusLabels[user.status]}
-                      </Badge>
+                      <AccountStatusBadge
+                        userId={user.id}
+                        status={user.status}
+                        canManage={canManage}
+                      />
                     </TableCell>
                     <TableCell>
                       {dateFormatter.format(user.createdAt)}
@@ -374,12 +462,12 @@ export function AccountsTable({
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
-                <Badge
-                  variant={STATUS_BADGE_VARIANT[user.status]}
+                <AccountStatusBadge
+                  userId={user.id}
+                  status={user.status}
+                  canManage={canManage}
                   className="w-fit"
-                >
-                  {statusLabels[user.status]}
-                </Badge>
+                />
                 <div className="flex flex-col gap-1 text-sm">
                   <div className="flex justify-between gap-4">
                     <span className="text-muted-foreground">
