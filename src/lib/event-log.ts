@@ -38,3 +38,16 @@ export async function logEvent(params: {
     console.error('[event-log] Nie udało się zapisać zdarzenia:', error)
   }
 }
+
+/**
+ * Usuwa wpisy dziennika starsze niż `retentionDays` - wywoływane przy
+ * wizycie na stronie dziennika (src/app/settings/events/page.tsx), a nie przy
+ * każdym zapisie zdarzenia, żeby nie obciążać każdej pojedynczej akcji.
+ */
+export async function cleanupExpiredEvents(retentionDays: number) {
+  const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000)
+
+  await prisma.eventLog.deleteMany({
+    where: { createdAt: { lt: cutoff } },
+  })
+}

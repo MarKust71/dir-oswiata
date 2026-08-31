@@ -101,6 +101,28 @@ export async function setInactivityTimeoutSeconds(seconds: number) {
   })
 }
 
+// Liczba dni, po których wpisy w dzienniku zdarzeń (EventLog) są czyszczone -
+// zob. src/app/settings/events/page.tsx. IP i user-agent to dane osobowe,
+// więc dziennik nie powinien rosnąć bez końca.
+export const EVENT_LOG_RETENTION_DAYS_KEY = 'event_log_retention_days'
+
+const DEFAULT_EVENT_LOG_RETENTION_DAYS = 90
+
+export function getEventLogRetentionDays() {
+  return getSettingPositiveInt(
+    EVENT_LOG_RETENTION_DAYS_KEY,
+    DEFAULT_EVENT_LOG_RETENTION_DAYS
+  )
+}
+
+export async function setEventLogRetentionDays(days: number) {
+  await prisma.settings.upsert({
+    where: { key: EVENT_LOG_RETENTION_DAYS_KEY },
+    create: { key: EVENT_LOG_RETENTION_DAYS_KEY, value: String(days) },
+    update: { value: String(days) },
+  })
+}
+
 export async function setResultsLimits(
   maxApplicationNumberAttempts: number,
   maxResultsViewCount: number

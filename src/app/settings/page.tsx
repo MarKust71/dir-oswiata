@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { requireRole } from '@/lib/dal'
 import {
+  getEventLogRetentionDays,
   getInactivityTimeoutSeconds,
   getMaintenanceMode,
   getMaxApplicationNumberAttempts,
@@ -32,6 +33,7 @@ import { InactivityTimeoutForm } from './inactivity-timeout-form'
 import { BackupForm } from './backup-form'
 import { MaintenanceModeForm } from './maintenance-mode-form'
 import { SkipEmailVerificationForm } from './skip-email-verification-form'
+import { EventLogRetentionForm } from './event-log-retention-form'
 
 export default async function SettingsPage() {
   await requireRole([Role.ADMIN])
@@ -45,6 +47,7 @@ export default async function SettingsPage() {
     inactivityTimeoutSeconds,
     maintenanceModeEnabled,
     skipEmailVerificationEnabled,
+    eventLogRetentionDays,
   ] = await Promise.all([
     getResultsVisibleFrom(),
     getResultsVisibleUntil(),
@@ -53,6 +56,7 @@ export default async function SettingsPage() {
     getInactivityTimeoutSeconds(),
     getMaintenanceMode(),
     getSkipEmailVerification(),
+    getEventLogRetentionDays(),
   ])
 
   return (
@@ -236,16 +240,23 @@ export default async function SettingsPage() {
             <CardDescription>
               Trwały zapis zdarzeń aplikacji (rejestracje, logowania, zmiany
               statusów kont, wysyłki e-maili) - niezależny od dostarczalności
-              poczty i od ulotnych logów serwera.
+              poczty i od ulotnych logów serwera. Adres IP i przeglądarka to
+              dane osobowe, dlatego stare wpisy są automatycznie usuwane.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col">
+          <CardContent className="flex flex-1 flex-col gap-4">
             <Link
               href="/settings/events"
               className={buttonVariants({ variant: 'outline' })}
             >
               Zobacz dziennik zdarzeń
             </Link>
+
+            <Separator />
+
+            <EventLogRetentionForm
+              initialDays={String(eventLogRetentionDays)}
+            />
           </CardContent>
         </Card>
       </div>

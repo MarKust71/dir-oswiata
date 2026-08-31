@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { requireRole } from '@/lib/dal'
 import {
+  setEventLogRetentionDays,
   setInactivityTimeoutSeconds,
   setMaintenanceMode,
   setNotificationEmails,
@@ -255,6 +256,40 @@ export async function updateInactivityTimeoutAction(
     revalidatePath('/settings')
 
     return { message: 'Zapisano czas automatycznego wylogowania.' }
+  } catch (error) {
+    if (
+      isDatabaseConnectionError(error) ||
+      (error instanceof Error && error.message === DB_CONNECTION_ERROR_MESSAGE)
+    ) {
+      return { error: DB_CONNECTION_ERROR_MESSAGE }
+    }
+    throw error
+  }
+}
+
+export async function updateEventLogRetentionAction(
+  _state: SettingsActionState,
+  formData: FormData
+): Promise<SettingsActionState> {
+  try {
+    const actor = await requireRole([Role.ADMIN])
+
+    const retentionDays = parsePositiveInt(formData.get('retentionDays'))
+
+    if (retentionDays === null) {
+      return { error: 'Podaj dodatnią liczbę całkowitą dni.' }
+    }
+
+    await setEventLogRetentionDays(retentionDays)
+    await logSettingsChange(
+      actor,
+      `Zmieniono okres przechowywania dziennika zdarzeń (${actor.email}).`,
+      { setting: 'event_log_retention_days', retentionDays }
+    )
+    revalidatePath('/settings')
+    revalidatePath('/settings/events')
+
+    return { message: 'Zapisano okres przechowywania dziennika zdarzeń.' }
   } catch (error) {
     if (
       isDatabaseConnectionError(error) ||

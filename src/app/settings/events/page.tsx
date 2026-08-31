@@ -2,6 +2,8 @@ import Link from 'next/link'
 
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
+import { getEventLogRetentionDays } from '@/lib/settings'
+import { cleanupExpiredEvents } from '@/lib/event-log'
 import { eventTypeLabels } from '@/lib/labels'
 import { cn } from '@/lib/utils'
 import { Role, EventType } from '@/generated/prisma/enums'
@@ -47,6 +49,13 @@ export default async function EventsPage({
   const type = params.type && isEventType(params.type) ? params.type : undefined
   const page = Math.max(1, Number(params.page) || 1)
 
+  // Czyszczenie starych wpisów uruchamiane przy wizycie na tej stronie, a nie
+  // przy każdym zapisie zdarzenia (jak w RegistrationAttempt/EmailSendLog) -
+  // to długoterminowy dziennik, więc sprzątanie przy każdym wpisie byłoby
+  // zbędnym obciążeniem; wizyta administratora to naturalna okazja.
+  const retentionDays = await getEventLogRetentionDays()
+  await cleanupExpiredEvents(retentionDays)
+
   const where = type ? { type } : {}
 
   const [events, totalCount] = await Promise.all([
@@ -78,7 +87,8 @@ export default async function EventsPage({
           </h1>
           <p className="text-sm text-muted-foreground">
             Trwały zapis zdarzeń aplikacji - niezależny od dostarczalności
-            e-maili i od ulotnych logów serwera.
+            e-maili i od ulotnych logów serwera. Wpisy starsze niż{' '}
+            {retentionDays} dni są automatycznie usuwane (zmień w Ustawieniach).
           </p>
         </div>
         <Link
