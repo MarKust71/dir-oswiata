@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition, type ReactNode } from 'react'
+import { useEffect, useState, useTransition, type ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   ArrowDown,
@@ -34,6 +35,8 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import {
   Tooltip,
   TooltipContent,
@@ -295,9 +298,26 @@ export function AccountsTable({
   description: ReactNode
   filters: ReactNode
 }) {
+  const router = useRouter()
   const [query, setQuery] = useState('')
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [autoRefresh, setAutoRefresh] = useState(false)
+
+  // Odświeżanie w tle co 60 s (z uwzględnieniem obecnych filtrów w URL) -
+  // router.refresh() tylko ponownie pobiera dane z serwera, nie generuje
+  // żadnego z eventów (mousedown/mousemove/keydown/scroll/touchstart)
+  // śledzonych przez InactivityLogout, więc nie wpływa na czas do
+  // automatycznego wylogowania.
+  useEffect(() => {
+    if (!autoRefresh) return
+
+    const interval = setInterval(() => {
+      router.refresh()
+    }, 60_000)
+
+    return () => clearInterval(interval)
+  }, [autoRefresh, router])
 
   function toggleSort(column: SortColumn) {
     if (sortColumn !== column) {
@@ -342,13 +362,29 @@ export function AccountsTable({
         {filters}
       </div>
 
-      <Input
-        type="search"
-        placeholder="Szukaj po e-mailu, imieniu, nazwisku lub telefonie…"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        className="max-w-sm"
-      />
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Input
+          type="search"
+          placeholder="Szukaj po e-mailu, imieniu, nazwisku lub telefonie…"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          className="max-w-sm"
+        />
+
+        <div className="flex items-center gap-2">
+          <Switch
+            id="auto-refresh"
+            checked={autoRefresh}
+            onCheckedChange={setAutoRefresh}
+          />
+          <Label
+            htmlFor="auto-refresh"
+            className="text-sm text-muted-foreground"
+          >
+            Odśwież automatycznie
+          </Label>
+        </div>
+      </div>
 
       {/* Desktop: tabela */}
       <Card className="hidden md:block">
