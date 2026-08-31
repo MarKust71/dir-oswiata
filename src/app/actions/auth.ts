@@ -156,7 +156,7 @@ export async function registerAction(
     return {
       success: true,
       message:
-        'Konto zostało utworzone. Sprawdź swoją skrzynkę e-mail i potwierdź adres, aby przejść do akceptacji administratora.',
+        'Konto zostało utworzone. Sprawdź swoją skrzynkę e-mail i potwierdź adres albo poczekaj na akceptację administratora.',
     }
   } catch (error) {
     if (isDatabaseConnectionError(error)) {

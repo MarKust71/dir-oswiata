@@ -20,8 +20,9 @@ export default async function RegisterPage() {
         <CardHeader>
           <CardTitle className="text-xl">Rejestracja</CardTitle>
           <CardDescription>
-            Uzyskanie dostępu do wyników wymaga założenia konta, potwierdzenia
-            adresu e-mail oraz akceptacji administratora.
+            Uzyskanie dostępu do wyników wymaga założenia konta oraz
+            potwierdzenia Twojego adresu e-mail (link w wiadomości) lub
+            akceptacji administratora.
           </CardDescription>
         </CardHeader>
         <CardContent>
