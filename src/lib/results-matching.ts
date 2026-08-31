@@ -17,12 +17,25 @@ type LinkedResult = {
   pesel: string
 }
 
-// Porównanie imienia/nazwiska bez względu na wielkość liter - dane w tabeli
-// wyników pochodzą z importu .xlsx i mogą różnić się wielkością liter od
-// tego, co użytkownik podał przy rejestracji.
+// Usuwa spacje wiodące/końcowe, zwija wielokrotne spacje wewnętrzne do
+// pojedynczej i usuwa spacje wokół myślnika (np. w nazwiskach dwuczłonowych) -
+// dane wpisywane ręcznie (rejestracja) lub pochodzące z importu .xlsx bywają
+// obarczone przypadkowymi dodatkowymi spacjami lub inaczej zapisanym łącznikiem.
+function normalizeName(value: string): string {
+  return value
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\s*-\s*/g, '-')
+}
+
+// Porównanie imienia/nazwiska bez względu na wielkość liter i spacje - dane w
+// tabeli wyników pochodzą z importu .xlsx i mogą różnić się od tego, co
+// użytkownik podał przy rejestracji.
 function namesMatch(userValue: string | null, resultValue: string) {
   return (
-    userValue !== null && userValue.toLowerCase() === resultValue.toLowerCase()
+    userValue !== null &&
+    normalizeName(userValue).toLowerCase() ===
+      normalizeName(resultValue).toLowerCase()
   )
 }
 
@@ -55,12 +68,11 @@ export async function tryLinkUserToResult(user: LinkableUser) {
     return false
   }
 
+  // Dopasowanie imienia/nazwiska (bez względu na wielkość liter i spacje)
+  // odbywa się w całości w resultMatchesUser - baza tylko odfiltrowuje
+  // rekordy już powiązane z innym kontem.
   const candidates = await prisma.results.findMany({
-    where: {
-      firstName: { equals: user.firstName, mode: 'insensitive' },
-      lastName: { equals: user.lastName, mode: 'insensitive' },
-      user: null,
-    },
+    where: { user: null },
     select: { id: true, firstName: true, lastName: true, pesel: true },
   })
 
