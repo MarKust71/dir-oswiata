@@ -127,13 +127,22 @@ async function sendMail({
   text,
   html,
   logLabel,
+  contextEmail,
 }: {
   to: string
   subject: string
   text: string
   html: string
   logLabel: string
+  // Konto, którego dotyczy wiadomość - istotne przy powiadomieniach
+  // administracyjnych, gdzie `to` to adres administratora, a nie osoby, o
+  // której jest mowa w treści. Pomijane, gdy `to` samo już jest tym kontem.
+  contextEmail?: string
 }) {
+  const recipientDescription = contextEmail
+    ? `${to} w sprawie konta ${contextEmail}`
+    : to
+
   const transporter = getTransporter()
 
   if (!transporter) {
@@ -141,7 +150,7 @@ async function sendMail({
     // .env.local) - wypisujemy treść w logach, żeby np. link weryfikacyjny
     // dało się ręcznie odczytać w trakcie developmentu.
     console.warn(
-      `[mailer] SMTP nie jest skonfigurowany (${logLabel} -> ${to}). ${text}`
+      `[mailer] SMTP nie jest skonfigurowany (${logLabel} -> ${recipientDescription}). ${text}`
     )
 
     return
@@ -150,13 +159,13 @@ async function sendMail({
   const { ok: canSend, dailyLimit } = await tryReserveSendSlot()
 
   if (!canSend) {
-    const message = `Pominięto wysyłkę (${logLabel}) do ${to} - osiągnięto dzienny limit ${dailyLimit} maili.`
+    const message = `Pominięto wysyłkę (${logLabel}) do ${recipientDescription} - osiągnięto dzienny limit ${dailyLimit} maili.`
     console.error(`[mailer] ${message}`)
 
     await logEvent({
       type: EventType.EMAIL_SEND_SKIPPED_HOURLY_LIMIT,
       message,
-      targetEmail: to,
+      targetEmail: contextEmail ?? to,
     })
 
     return
@@ -172,7 +181,7 @@ async function sendMail({
     })
 
     console.log(
-      `[mailer] Wysłano (${logLabel}) do ${to} (messageId: ${info.messageId}, response: ${info.response})`
+      `[mailer] Wysłano (${logLabel}) do ${recipientDescription} (messageId: ${info.messageId}, response: ${info.response})`
     )
   } catch (error) {
     // Blad wysylki (np. odrzucony adres odbiorcy) nie moze wywalic calej
@@ -180,14 +189,14 @@ async function sendMail({
     // tego, czy mail dotarl. Miejsce w limicie zostaje zarezerwowane mimo
     // błędu - próba wysyłki i tak obciążyła sesję SMTP u dostawcy.
     console.error(
-      `[mailer] Nie udało się wysłać (${logLabel}) do ${to}:`,
+      `[mailer] Nie udało się wysłać (${logLabel}) do ${recipientDescription}:`,
       error
     )
 
     await logEvent({
       type: EventType.EMAIL_SEND_FAILED,
-      message: `Nie udało się wysłać (${logLabel}) do ${to}: ${error instanceof Error ? error.message : String(error)}`,
-      targetEmail: to,
+      message: `Nie udało się wysłać (${logLabel}) do ${recipientDescription}: ${error instanceof Error ? error.message : String(error)}`,
+      targetEmail: contextEmail ?? to,
     })
   }
 }
@@ -226,6 +235,7 @@ export async function sendPendingApprovalNotification(
         text,
         html,
         logLabel: 'powiadomienie o oczekującym koncie',
+        contextEmail: userEmail,
       })
     )
   )
@@ -272,6 +282,7 @@ export async function sendAccountStatusChangeAdminNotification(
         text,
         html,
         logLabel: 'powiadomienie o zmianie statusu konta',
+        contextEmail: targetEmail,
       })
     )
   )
@@ -295,6 +306,7 @@ export async function sendAccountLockedAdminNotification(
         text,
         html,
         logLabel: 'powiadomienie o zablokowaniu konta',
+        contextEmail: userEmail,
       })
     )
   )
@@ -332,6 +344,7 @@ export async function sendResultsViewLimitReachedAdminNotification(
         text,
         html,
         logLabel: 'powiadomienie o zablokowaniu konta (limit wyświetleń)',
+        contextEmail: userEmail,
       })
     )
   )
@@ -355,6 +368,7 @@ export async function sendMissingResultAdminNotification(
         text,
         html,
         logLabel: 'powiadomienie o braku wyniku',
+        contextEmail: userEmail,
       })
     )
   )
@@ -378,6 +392,7 @@ export async function sendProfileCorrectionAdminNotification(
         text,
         html,
         logLabel: 'powiadomienie o poprawie danych konta',
+        contextEmail: userEmail,
       })
     )
   )
@@ -446,6 +461,7 @@ export async function sendDuplicateResultRegistrationAttemptAdminNotification(
         text,
         html,
         logLabel: 'powiadomienie o próbie rejestracji duplikatu konta',
+        contextEmail: attemptedEmail,
       })
     )
   )
@@ -486,6 +502,7 @@ export async function sendDuplicateResultProfileEditAttemptAdminNotification(
         text,
         html,
         logLabel: 'powiadomienie o zablokowaniu konta (cudzy wynik)',
+        contextEmail: blockedAccountEmail,
       })
     )
   )
