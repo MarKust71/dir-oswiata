@@ -126,8 +126,7 @@ export function RegisterForm() {
       <div className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
           Dla weryfikacji Twojej tożsamości wprowadź imię, nazwisko oraz
-          wskazane cyfry Twojego numeru PESEL. Te dane muszą być zgodne z
-          protokołem egzaminu.
+          wskazane cyfry Twojego numeru PESEL.
         </p>
 
         <p className="text-sm text-muted-foreground">
