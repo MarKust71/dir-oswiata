@@ -37,6 +37,10 @@ type AccountActionsProps = {
   status: AccountStatus
   canManage: boolean
   canDelete: boolean
+  // Rola USER nie może aktywować z pominięciem linku aktywacyjnego konta
+  // ucznia, dla którego nie znaleziono jeszcze wyniku (zob.
+  // setAccountStatusAction) - kontrolka jest wtedy widoczna, ale wyłączona.
+  disableActivateFromPendingEmail?: boolean
   assignableRoles: Role[]
   // "compact" ustawia kontrolki jedna pod druga, żeby nie poszerzać kolumny
   // w tabeli desktopowej; "wide" (domyślnie) układa je obok siebie - używane
@@ -51,6 +55,7 @@ export function AccountActions({
   status,
   canManage,
   canDelete,
+  disableActivateFromPendingEmail = false,
   assignableRoles,
   layout = 'wide',
 }: AccountActionsProps) {
@@ -118,7 +123,12 @@ export function AccountActions({
         {status === AccountStatus.PENDING_EMAIL && (
           <Button
             size="sm"
-            disabled={pending}
+            disabled={pending || disableActivateFromPendingEmail}
+            title={
+              disableActivateFromPendingEmail
+                ? 'Brak wyniku dla tego konta - aktywację z pominięciem linku może wykonać tylko administrator.'
+                : undefined
+            }
             onClick={() => handleStatus(AccountStatus.ACTIVE)}
           >
             Aktywuj
