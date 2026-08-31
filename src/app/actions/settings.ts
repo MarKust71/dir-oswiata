@@ -13,21 +13,41 @@ import {
 } from '@/lib/settings'
 import { NotificationEmailSchema } from '@/lib/validation'
 import { parseWarsawLocalDateTime } from '@/lib/warsaw-time'
+import { getClientRequestInfo } from '@/lib/request-info'
+import { logEvent } from '@/lib/event-log'
 import {
   DB_CONNECTION_ERROR_MESSAGE,
   isDatabaseConnectionError,
 } from '@/lib/db-error'
-import { Role } from '@/generated/prisma/enums'
+import { Prisma } from '@/generated/prisma/client'
+import { EventType, Role } from '@/generated/prisma/enums'
 
 export type SettingsActionState =
   { message?: string; error?: string } | undefined
+
+async function logSettingsChange(
+  actor: { email: string; id: string },
+  message: string,
+  metadata: Prisma.InputJsonValue
+) {
+  const { ip, userAgent } = await getClientRequestInfo()
+  await logEvent({
+    type: EventType.SETTINGS_CHANGED,
+    message,
+    actorEmail: actor.email,
+    actorUserId: actor.id,
+    ip,
+    userAgent,
+    metadata,
+  })
+}
 
 export async function updateNotificationEmailsAction(
   _state: SettingsActionState,
   formData: FormData
 ): Promise<SettingsActionState> {
   try {
-    await requireRole([Role.ADMIN])
+    const actor = await requireRole([Role.ADMIN])
 
     const candidates = String(formData.get('emails') ?? '')
       .split(/[,\n]/)
@@ -46,6 +66,11 @@ export async function updateNotificationEmailsAction(
     }
 
     await setNotificationEmails(emails)
+    await logSettingsChange(
+      actor,
+      `Zmieniono listę adresów do powiadomień (${actor.email}).`,
+      { setting: 'notification_emails', emails }
+    )
     revalidatePath('/settings')
 
     return { message: 'Zapisano listę adresów do powiadomień.' }
@@ -65,7 +90,7 @@ export async function updateResultsWindowAction(
   formData: FormData
 ): Promise<SettingsActionState> {
   try {
-    await requireRole([Role.ADMIN])
+    const actor = await requireRole([Role.ADMIN])
 
     const from = parseWarsawLocalDateTime(String(formData.get('from') ?? ''))
     const until = parseWarsawLocalDateTime(String(formData.get('until') ?? ''))
@@ -80,6 +105,15 @@ export async function updateResultsWindowAction(
     }
 
     await setResultsVisibilityWindow(from, until)
+    await logSettingsChange(
+      actor,
+      `Zmieniono okres udostępnienia wyników (${actor.email}).`,
+      {
+        setting: 'results_window',
+        from: from.toISOString(),
+        until: until.toISOString(),
+      }
+    )
     revalidatePath('/settings')
     revalidatePath('/panel')
 
@@ -106,7 +140,7 @@ export async function updateResultsLimitsAction(
   formData: FormData
 ): Promise<SettingsActionState> {
   try {
-    await requireRole([Role.ADMIN])
+    const actor = await requireRole([Role.ADMIN])
 
     const maxApplicationNumberAttempts = parsePositiveInt(
       formData.get('maxApplicationNumberAttempts')
@@ -120,6 +154,15 @@ export async function updateResultsLimitsAction(
     }
 
     await setResultsLimits(maxApplicationNumberAttempts, maxResultsViewCount)
+    await logSettingsChange(
+      actor,
+      `Zmieniono limity weryfikacji numeru wniosku (${actor.email}).`,
+      {
+        setting: 'results_limits',
+        maxApplicationNumberAttempts,
+        maxResultsViewCount,
+      }
+    )
     revalidatePath('/settings')
 
     return { message: 'Zapisano limity.' }
@@ -138,9 +181,14 @@ export async function updateMaintenanceModeAction(
   enabled: boolean
 ): Promise<{ error?: string }> {
   try {
-    await requireRole([Role.ADMIN])
+    const actor = await requireRole([Role.ADMIN])
 
     await setMaintenanceMode(enabled)
+    await logSettingsChange(
+      actor,
+      `Przełącznik przerwy konserwacyjnej ustawiony na ${enabled} przez ${actor.email}.`,
+      { setting: 'maintenance_mode', enabled }
+    )
     revalidatePath('/settings')
     revalidatePath('/login')
     revalidatePath('/')
@@ -161,9 +209,14 @@ export async function updateSkipEmailVerificationAction(
   enabled: boolean
 ): Promise<{ error?: string }> {
   try {
-    await requireRole([Role.ADMIN])
+    const actor = await requireRole([Role.ADMIN])
 
     await setSkipEmailVerification(enabled)
+    await logSettingsChange(
+      actor,
+      `Przełącznik pomijania weryfikacji e-mail ustawiony na ${enabled} przez ${actor.email}.`,
+      { setting: 'skip_email_verification', enabled }
+    )
     revalidatePath('/settings')
 
     return {}
@@ -183,7 +236,7 @@ export async function updateInactivityTimeoutAction(
   formData: FormData
 ): Promise<SettingsActionState> {
   try {
-    await requireRole([Role.ADMIN])
+    const actor = await requireRole([Role.ADMIN])
 
     const inactivityTimeoutSeconds = parsePositiveInt(
       formData.get('inactivityTimeoutSeconds')
@@ -194,6 +247,11 @@ export async function updateInactivityTimeoutAction(
     }
 
     await setInactivityTimeoutSeconds(inactivityTimeoutSeconds)
+    await logSettingsChange(
+      actor,
+      `Zmieniono czas automatycznego wylogowania (${actor.email}).`,
+      { setting: 'inactivity_timeout', inactivityTimeoutSeconds }
+    )
     revalidatePath('/settings')
 
     return { message: 'Zapisano czas automatycznego wylogowania.' }

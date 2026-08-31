@@ -1,7 +1,6 @@
 'use server'
 
 import crypto from 'node:crypto'
-import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { prisma } from '@/lib/prisma'
@@ -34,11 +33,19 @@ import {
   getSkipEmailVerification,
 } from '@/lib/settings'
 import { maskEmail } from '@/lib/mask-email'
-import { AccountStatus, Role } from '@/generated/prisma/enums'
+import { getClientRequestInfo } from '@/lib/request-info'
+import { logEvent } from '@/lib/event-log'
+import { AccountStatus, EventType, Role } from '@/generated/prisma/enums'
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000 // 24h
 
-async function issueVerificationToken(userId: string, email: string) {
+async function issueVerificationToken(
+  userId: string,
+  email: string,
+  eventType:
+    | typeof EventType.EMAIL_VERIFICATION_SENT
+    | typeof EventType.EMAIL_VERIFICATION_RESENT = EventType.EMAIL_VERIFICATION_SENT
+) {
   const token = crypto.randomBytes(32).toString('hex')
   await prisma.verificationToken.create({
     data: {
@@ -48,17 +55,21 @@ async function issueVerificationToken(userId: string, email: string) {
     },
   })
   await sendVerificationEmail(email, token)
-}
 
-async function getClientIp() {
-  const headersList = await headers()
-  const forwardedFor = headersList.get('x-forwarded-for')
-
-  return (
-    forwardedFor?.split(',')[0].trim() ||
-    headersList.get('x-real-ip') ||
-    'unknown'
-  )
+  const { ip, userAgent } = await getClientRequestInfo()
+  await logEvent({
+    type: eventType,
+    message:
+      eventType === EventType.EMAIL_VERIFICATION_SENT
+        ? `Wysłano link weryfikacyjny do ${email}.`
+        : `Ponownie wysłano link weryfikacyjny do ${email}.`,
+    actorEmail: email,
+    actorUserId: userId,
+    targetEmail: email,
+    targetUserId: userId,
+    ip,
+    userAgent,
+  })
 }
 
 // Limit rejestracji z jednego adresu IP - chroni skrzynkę SMTP przed
@@ -86,7 +97,8 @@ export async function registerAction(
     }
   }
 
-  const clientIp = await getClientIp()
+  const { ip, userAgent } = await getClientRequestInfo()
+  const clientIp = ip ?? 'unknown'
   const rateLimitWindowStart = new Date(
     Date.now() - REGISTRATION_RATE_LIMIT_WINDOW_MS
   )
@@ -100,6 +112,14 @@ export async function registerAction(
     where: { ip: clientIp, createdAt: { gte: rateLimitWindowStart } },
   })
   if (recentAttempts >= REGISTRATION_RATE_LIMIT_MAX) {
+    await logEvent({
+      type: EventType.REGISTRATION_BLOCKED_RATE_LIMIT,
+      message: `Zablokowano próbę rejestracji - przekroczono limit ${REGISTRATION_RATE_LIMIT_MAX} rejestracji/h z adresu ${clientIp}.`,
+      actorEmail: String(formData.get('email') ?? '') || null,
+      ip,
+      userAgent,
+    })
+
     return {
       message:
         'Zbyt wiele prób rejestracji z tego miejsca. Spróbuj ponownie za jakiś czas.',
@@ -157,10 +177,18 @@ export async function registerAction(
 
     if (linkedAccountEmail) {
       const message = `Wynik egzaminu tej osoby został już wcześniej przypisany do innego konta - ${maskEmail(linkedAccountEmail)}. Powiadomimy tamtego użytkownika o próbie sprawdzenia wyniku. Jeśli uważasz, że to pomyłka, skontaktuj się z DIR.`
+      const logMessage = `Zablokowano rejestrację (${email}) - dane pasują do wyniku już przypisanego do konta ${linkedAccountEmail}.`
 
-      console.warn(
-        `[auth] Zablokowano rejestrację (${email}) - dane pasują do wyniku już przypisanego do konta ${linkedAccountEmail}.`
-      )
+      console.warn(`[auth] ${logMessage}`)
+
+      await logEvent({
+        type: EventType.REGISTRATION_BLOCKED_DUPLICATE_RESULT,
+        message: logMessage,
+        actorEmail: email,
+        targetEmail: linkedAccountEmail,
+        ip,
+        userAgent,
+      })
 
       await sendDuplicateResultRegistrationAttemptUserEmail(linkedAccountEmail)
 
@@ -196,6 +224,18 @@ export async function registerAction(
       },
     })
 
+    await logEvent({
+      type: EventType.REGISTRATION_SUBMITTED,
+      message: `Zarejestrowano nowe konto: ${user.email}.`,
+      actorEmail: user.email,
+      actorUserId: user.id,
+      targetEmail: user.email,
+      targetUserId: user.id,
+      ip,
+      userAgent,
+      metadata: { skipEmailVerification },
+    })
+
     if (skipEmailVerification) {
       // Rejestracja z pominięciem potwierdzenia e-mail (przełącznik w
       // Ustawieniach) - konto trafia od razu do stanu oczekującego na
@@ -206,6 +246,17 @@ export async function registerAction(
 
       const notificationEmails = await getNotificationEmails()
       await sendPendingApprovalNotification(notificationEmails, user.email)
+
+      await logEvent({
+        type: EventType.ACCOUNT_PENDING_APPROVAL,
+        message: `Konto ${user.email} oczekuje na akceptację (rejestracja z pominięciem potwierdzenia e-mail).`,
+        actorEmail: user.email,
+        actorUserId: user.id,
+        targetEmail: user.email,
+        targetUserId: user.id,
+        ip,
+        userAgent,
+      })
     } else {
       await issueVerificationToken(user.id, user.email)
     }
@@ -240,6 +291,7 @@ export async function loginAction(
   }
 
   const { email, password } = validated.data
+  const { ip, userAgent } = await getClientRequestInfo()
 
   let user
   try {
@@ -252,6 +304,16 @@ export async function loginAction(
   }
 
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    await logEvent({
+      type: EventType.LOGIN_FAILED,
+      message: `Nieudane logowanie: ${email}.`,
+      actorEmail: email,
+      targetEmail: email,
+      targetUserId: user?.id,
+      ip,
+      userAgent,
+    })
+
     return { message: 'Nieprawidłowy e-mail lub hasło.' }
   }
 
@@ -279,6 +341,17 @@ export async function loginAction(
         'Przerwa konserwacyjna. Serwis będzie dostępny wkrótce. Zajrzyj ponownie za kilka minut.',
     }
   }
+
+  await logEvent({
+    type: EventType.LOGIN_SUCCEEDED,
+    message: `Zalogowano: ${user.email}.`,
+    actorEmail: user.email,
+    actorUserId: user.id,
+    targetEmail: user.email,
+    targetUserId: user.id,
+    ip,
+    userAgent,
+  })
 
   await createSession(user.id, user.role)
   redirect(homePathForRole(user.role))
@@ -339,6 +412,28 @@ export async function verifyEmailAction(token: string) {
       verifiedUser.email
     )
 
+    const { ip, userAgent } = await getClientRequestInfo()
+    await logEvent({
+      type: EventType.EMAIL_VERIFIED,
+      message: `Potwierdzono adres e-mail: ${verifiedUser.email}.`,
+      actorEmail: verifiedUser.email,
+      actorUserId: verifiedUser.id,
+      targetEmail: verifiedUser.email,
+      targetUserId: verifiedUser.id,
+      ip,
+      userAgent,
+    })
+    await logEvent({
+      type: EventType.ACCOUNT_PENDING_APPROVAL,
+      message: `Konto ${verifiedUser.email} oczekuje na akceptację (po potwierdzeniu e-mail).`,
+      actorEmail: verifiedUser.email,
+      actorUserId: verifiedUser.id,
+      targetEmail: verifiedUser.email,
+      targetUserId: verifiedUser.id,
+      ip,
+      userAgent,
+    })
+
     return {
       success: true as const,
       message:
@@ -374,7 +469,11 @@ export async function resendVerificationAction(email: string) {
         await prisma.verificationToken.deleteMany({
           where: { userId: user.id },
         })
-        await issueVerificationToken(user.id, user.email)
+        await issueVerificationToken(
+          user.id,
+          user.email,
+          EventType.EMAIL_VERIFICATION_RESENT
+        )
       }
     }
   } catch (error) {

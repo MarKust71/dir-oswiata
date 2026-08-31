@@ -6,11 +6,13 @@ import ExcelJS from 'exceljs'
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
 import { relinkAllStudentsToResults } from '@/lib/results-matching'
+import { getClientRequestInfo } from '@/lib/request-info'
+import { logEvent } from '@/lib/event-log'
 import {
   DB_CONNECTION_ERROR_MESSAGE,
   isDatabaseConnectionError,
 } from '@/lib/db-error'
-import { Role } from '@/generated/prisma/enums'
+import { EventType, Role } from '@/generated/prisma/enums'
 
 export type ImportResultsActionState =
   { message?: string; error?: string } | undefined
@@ -23,10 +25,21 @@ export async function relinkResultsAction(
   _formData: FormData
 ): Promise<RelinkResultsActionState> {
   try {
-    await requireRole([Role.ADMIN])
+    const actor = await requireRole([Role.ADMIN])
 
     const { linkedCount, unlinkedCount, unchangedCount } =
       await relinkAllStudentsToResults()
+
+    const { ip, userAgent } = await getClientRequestInfo()
+    await logEvent({
+      type: EventType.RESULTS_RELINKED,
+      message: `Ponowne dopasowanie wyników uruchomione przez ${actor.email} - nowo powiązane: ${linkedCount}, rozłączone: ${unlinkedCount}, niezmienione: ${unchangedCount}.`,
+      actorEmail: actor.email,
+      actorUserId: actor.id,
+      ip,
+      userAgent,
+      metadata: { linkedCount, unlinkedCount, unchangedCount },
+    })
 
     revalidatePath('/settings')
     revalidatePath('/panel')
@@ -110,7 +123,7 @@ export async function importResultsAction(
   formData: FormData
 ): Promise<ImportResultsActionState> {
   try {
-    await requireRole([Role.ADMIN])
+    const actor = await requireRole([Role.ADMIN])
 
     const file = formData.get('file')
     if (!(file instanceof File) || file.size === 0) {
@@ -200,6 +213,17 @@ export async function importResultsAction(
     // ON DELETE SET NULL (import usuwa wszystkie stare rekordy Results), więc
     // liczą się tylko nowe powiązania.
     const { linkedCount } = await relinkAllStudentsToResults()
+
+    const { ip, userAgent } = await getClientRequestInfo()
+    await logEvent({
+      type: EventType.RESULTS_IMPORTED,
+      message: `Import wyników przez ${actor.email} - zaimportowano ${rows.length} wierszy, powiązano ${linkedCount} kont.`,
+      actorEmail: actor.email,
+      actorUserId: actor.id,
+      ip,
+      userAgent,
+      metadata: { rowCount: rows.length, linkedCount },
+    })
 
     revalidatePath('/settings')
     revalidatePath('/dashboard')

@@ -13,11 +13,13 @@ import {
   sendResultsViewLimitReachedAdminNotification,
   sendResultsViewLimitReachedUserEmail,
 } from '@/lib/mailer'
+import { getClientRequestInfo } from '@/lib/request-info'
+import { logEvent } from '@/lib/event-log'
 import {
   DB_CONNECTION_ERROR_MESSAGE,
   isDatabaseConnectionError,
 } from '@/lib/db-error'
-import { AccountStatus, Role } from '@/generated/prisma/enums'
+import { AccountStatus, EventType, Role } from '@/generated/prisma/enums'
 
 type ResultDetails = {
   firstName: string
@@ -112,6 +114,18 @@ export async function verifyApplicationNumberAction(
           user.email
         )
         await sendResultsViewLimitReachedUserEmail(user.email)
+
+        const { ip, userAgent } = await getClientRequestInfo()
+        await logEvent({
+          type: EventType.ACCOUNT_LOCKED_RESULTS_VIEW_LIMIT,
+          message: `Konto ${user.email} zablokowane - wykorzystano limit ${maxViews} wyświetleń wyniku.`,
+          actorEmail: user.email,
+          actorUserId: user.id,
+          targetEmail: user.email,
+          targetUserId: user.id,
+          ip,
+          userAgent,
+        })
       }
 
       return {
@@ -135,6 +149,18 @@ export async function verifyApplicationNumberAction(
       const notificationEmails = await getNotificationEmails()
       await sendAccountLockedAdminNotification(notificationEmails, user.email)
       await sendAccountLockedUserEmail(user.email)
+
+      const { ip, userAgent } = await getClientRequestInfo()
+      await logEvent({
+        type: EventType.ACCOUNT_LOCKED_APPLICATION_NUMBER,
+        message: `Konto ${user.email} zablokowane - ${maxAttempts} błędnych prób podania numeru wniosku.`,
+        actorEmail: user.email,
+        actorUserId: user.id,
+        targetEmail: user.email,
+        targetUserId: user.id,
+        ip,
+        userAgent,
+      })
 
       return {
         status: 'locked',

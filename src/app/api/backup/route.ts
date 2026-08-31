@@ -4,12 +4,25 @@ import packageJson from '../../../../package.json'
 import { requireRole } from '@/lib/dal'
 import { createDatabaseBackup } from '@/lib/db-backup'
 import { toWarsawLocalDateTimeInputValue } from '@/lib/warsaw-time'
-import { Role } from '@/generated/prisma/enums'
+import { getClientRequestInfo } from '@/lib/request-info'
+import { logEvent } from '@/lib/event-log'
+import { EventType, Role } from '@/generated/prisma/enums'
 
 export async function GET() {
-  await requireRole([Role.ADMIN])
+  const actor = await requireRole([Role.ADMIN])
 
   const backup = await createDatabaseBackup()
+
+  const { ip, userAgent } = await getClientRequestInfo()
+  await logEvent({
+    type: EventType.DB_BACKUP_CREATED,
+    message: `Pobrano kopię zapasową bazy danych (${actor.email}).`,
+    actorEmail: actor.email,
+    actorUserId: actor.id,
+    ip,
+    userAgent,
+  })
+
   const timestamp = toWarsawLocalDateTimeInputValue(new Date()).replace(
     /[:T]/g,
     '-'

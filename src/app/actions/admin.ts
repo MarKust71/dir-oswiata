@@ -13,11 +13,13 @@ import {
 } from '@/lib/mailer'
 import { getNotificationEmails } from '@/lib/settings'
 import { roleLabels } from '@/lib/labels'
+import { getClientRequestInfo } from '@/lib/request-info'
+import { logEvent } from '@/lib/event-log'
 import {
   DB_CONNECTION_ERROR_MESSAGE,
   isDatabaseConnectionError,
 } from '@/lib/db-error'
-import { AccountStatus, Role } from '@/generated/prisma/enums'
+import { AccountStatus, EventType, Role } from '@/generated/prisma/enums'
 
 export type AdminActionState = { message?: string; error?: string } | undefined
 
@@ -145,6 +147,26 @@ export async function setAccountStatusAction(
       nextStatus === AccountStatus.ACTIVE
     )
 
+    const { ip, userAgent } = await getClientRequestInfo()
+    await logEvent({
+      type:
+        nextStatus === AccountStatus.ACTIVE
+          ? activatingFromPendingEmail
+            ? EventType.ACCOUNT_ACTIVATED_SKIP_EMAIL_VERIFICATION
+            : EventType.ACCOUNT_ACTIVATED
+          : EventType.ACCOUNT_DEACTIVATED,
+      message:
+        nextStatus === AccountStatus.ACTIVE
+          ? `Konto ${target.email} aktywowane przez ${actor.email}${activatingFromPendingEmail ? ' (z pominięciem potwierdzenia e-mail)' : ''}.`
+          : `Konto ${target.email} dezaktywowane przez ${actor.email}.`,
+      actorEmail: actor.email,
+      actorUserId: actor.id,
+      targetEmail: target.email,
+      targetUserId: target.id,
+      ip,
+      userAgent,
+    })
+
     revalidatePath('/dashboard')
 
     return {
@@ -205,6 +227,18 @@ export async function deleteAccountAction(
 
     await prisma.user.delete({ where: { id: target.id } })
 
+    const { ip, userAgent } = await getClientRequestInfo()
+    await logEvent({
+      type: EventType.ACCOUNT_DELETED,
+      message: `Konto ${target.email} trwale usunięte przez ${actor.email}.`,
+      actorEmail: actor.email,
+      actorUserId: actor.id,
+      targetEmail: target.email,
+      targetUserId: target.id,
+      ip,
+      userAgent,
+    })
+
     revalidatePath('/dashboard')
 
     return { message: 'Konto zostało trwale usunięte.' }
@@ -236,6 +270,19 @@ export async function setAccountRoleAction(
     await prisma.user.update({
       where: { id: target.id },
       data: { role: nextRole },
+    })
+
+    const { ip, userAgent } = await getClientRequestInfo()
+    await logEvent({
+      type: EventType.ACCOUNT_ROLE_CHANGED,
+      message: `Rola konta ${target.email} zmieniona z ${target.role} na ${nextRole} przez ${actor.email}.`,
+      actorEmail: actor.email,
+      actorUserId: actor.id,
+      targetEmail: target.email,
+      targetUserId: target.id,
+      ip,
+      userAgent,
+      metadata: { previousRole: target.role, nextRole },
     })
 
     revalidatePath('/dashboard')

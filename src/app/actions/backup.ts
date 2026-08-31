@@ -8,11 +8,13 @@ import {
   databaseBackupSchema,
   restoreDatabaseBackup,
 } from '@/lib/db-backup'
+import { getClientRequestInfo } from '@/lib/request-info'
+import { logEvent } from '@/lib/event-log'
 import {
   DB_CONNECTION_ERROR_MESSAGE,
   isDatabaseConnectionError,
 } from '@/lib/db-error'
-import { Role } from '@/generated/prisma/enums'
+import { EventType, Role } from '@/generated/prisma/enums'
 
 export type RestoreBackupActionState =
   { message?: string; error?: string } | undefined
@@ -33,7 +35,7 @@ export async function restoreBackupAction(
   formData: FormData
 ): Promise<RestoreBackupActionState> {
   try {
-    await requireRole([Role.ADMIN])
+    const actor = await requireRole([Role.ADMIN])
 
     const file = formData.get('file')
     if (!(file instanceof File) || file.size === 0) {
@@ -66,6 +68,17 @@ export async function restoreBackupAction(
     }
 
     const counts = await restoreDatabaseBackup(result.data)
+
+    const { ip, userAgent } = await getClientRequestInfo()
+    await logEvent({
+      type: EventType.DB_BACKUP_RESTORED,
+      message: `Przywrócono kopię zapasową bazy danych (${actor.email}) - ${counts.userCount} kont, ${counts.resultsCount} wyników.`,
+      actorEmail: actor.email,
+      actorUserId: actor.id,
+      ip,
+      userAgent,
+      metadata: { ...counts },
+    })
 
     revalidatePath('/dashboard')
     revalidatePath('/settings')
