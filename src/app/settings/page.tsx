@@ -2,6 +2,8 @@ import Link from 'next/link'
 
 import { requireRole } from '@/lib/dal'
 import {
+  getAwsDailySendLimit,
+  getAwsMaxSendRatePerSecond,
   getEventLogRetentionDays,
   getInactivityTimeoutSeconds,
   getMaintenanceMode,
@@ -34,6 +36,7 @@ import { BackupForm } from './backup-form'
 import { MaintenanceModeForm } from './maintenance-mode-form'
 import { SkipEmailVerificationForm } from './skip-email-verification-form'
 import { EventLogRetentionForm } from './event-log-retention-form'
+import { AwsSendLimitsForm } from './aws-send-limits-form'
 
 export default async function SettingsPage() {
   await requireRole([Role.ADMIN])
@@ -48,6 +51,8 @@ export default async function SettingsPage() {
     maintenanceModeEnabled,
     skipEmailVerificationEnabled,
     eventLogRetentionDays,
+    awsDailySendLimit,
+    awsMaxSendRatePerSecond,
   ] = await Promise.all([
     getResultsVisibleFrom(),
     getResultsVisibleUntil(),
@@ -57,6 +62,8 @@ export default async function SettingsPage() {
     getMaintenanceMode(),
     getSkipEmailVerification(),
     getEventLogRetentionDays(),
+    getAwsDailySendLimit(),
+    getAwsMaxSendRatePerSecond(),
   ])
 
   return (
@@ -256,6 +263,23 @@ export default async function SettingsPage() {
 
             <EventLogRetentionForm
               initialDays={String(eventLogRetentionDays)}
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle className="text-base">Limity wysyłki AWS SES</CardTitle>
+            <CardDescription>
+              Chronią przed odrzuceniem/zablokowaniem konta wysyłkowego -
+              sprawdź aktualne wartości w konsoli AWS SES (Account dashboard
+              -&gt; Sending limits) i ustaw je tutaj z niewielkim zapasem.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col">
+            <AwsSendLimitsForm
+              initialDailySendLimit={String(awsDailySendLimit)}
+              initialMaxSendRatePerSecond={String(awsMaxSendRatePerSecond)}
             />
           </CardContent>
         </Card>
