@@ -50,20 +50,40 @@ function getTransporter() {
 const HOURLY_SEND_LIMIT = 180
 const HOURLY_SEND_WINDOW_MS = 60 * 60 * 1000
 
-async function canSendMoreThisHour() {
-  const windowStart = new Date(Date.now() - HOURLY_SEND_WINDOW_MS)
+// Dowolna stała, unikalna w skali aplikacji - identyfikuje blokadę używaną
+// tylko do serializacji rezerwacji miejsca w limicie wysyłki.
+const SEND_LIMIT_LOCK_KEY = 727001
 
-  // Sprzątanie starych wpisów przy okazji sprawdzania limitu - bez osobnego
-  // zadania czyszczącego, bo tabela i tak przechowuje tylko dane z ostatniej
-  // godziny.
-  await prisma.emailSendLog.deleteMany({
-    where: { createdAt: { lt: windowStart } },
-  })
-  const sentInWindow = await prisma.emailSendLog.count({
-    where: { createdAt: { gte: windowStart } },
-  })
+// Sprawdzenie limitu i zapis licznika muszą być jedną, niepodzielną operacją -
+// w przeciwnym razie równoległe wywołania sendMail() (np. powiadomienie do
+// kilku adresów administracyjnych naraz przez Promise.all, albo kilka
+// równoczesnych żądań na różnych instancjach serverless) mogą odczytać ten
+// sam licznik, zanim którekolwiek zdąży go zwiększyć, i wszystkie przejść
+// sprawdzenie - realnie przekraczając limit mimo pozornej kontroli.
+// pg_advisory_xact_lock serializuje te rezerwacje na czas transakcji i
+// zwalnia się sam przy jej zakończeniu (commit lub rollback).
+async function tryReserveSendSlot(): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SEND_LIMIT_LOCK_KEY})`
 
-  return sentInWindow < HOURLY_SEND_LIMIT
+    const windowStart = new Date(Date.now() - HOURLY_SEND_WINDOW_MS)
+
+    // Sprzątanie starych wpisów przy okazji sprawdzania limitu - bez osobnego
+    // zadania czyszczącego, bo tabela i tak przechowuje tylko dane z
+    // ostatniej godziny.
+    await tx.emailSendLog.deleteMany({
+      where: { createdAt: { lt: windowStart } },
+    })
+    const sentInWindow = await tx.emailSendLog.count({
+      where: { createdAt: { gte: windowStart } },
+    })
+
+    if (sentInWindow >= HOURLY_SEND_LIMIT) return false
+
+    await tx.emailSendLog.create({ data: {} })
+
+    return true
+  })
 }
 
 // Jedyne miejsce, które faktycznie woła transporter.sendMail() - dzięki temu
@@ -95,7 +115,7 @@ async function sendMail({
     return
   }
 
-  if (!(await canSendMoreThisHour())) {
+  if (!(await tryReserveSendSlot())) {
     const message = `Pominięto wysyłkę (${logLabel}) do ${to} - osiągnięto godzinowy limit ${HOURLY_SEND_LIMIT} maili (limit dostawcy: 200/h).`
     console.error(`[mailer] ${message}`)
 
@@ -123,7 +143,8 @@ async function sendMail({
   } catch (error) {
     // Blad wysylki (np. odrzucony adres odbiorcy) nie moze wywalic calej
     // operacji, ktora go wywolala - jest juz zapisana w bazie niezaleznie od
-    // tego, czy mail dotarl.
+    // tego, czy mail dotarl. Miejsce w limicie zostaje zarezerwowane mimo
+    // błędu - próba wysyłki i tak obciążyła sesję SMTP u dostawcy.
     console.error(
       `[mailer] Nie udało się wysłać (${logLabel}) do ${to}:`,
       error
@@ -134,8 +155,6 @@ async function sendMail({
       message: `Nie udało się wysłać (${logLabel}) do ${to}: ${error instanceof Error ? error.message : String(error)}`,
       targetEmail: to,
     })
-  } finally {
-    await prisma.emailSendLog.create({ data: {} })
   }
 }
 
