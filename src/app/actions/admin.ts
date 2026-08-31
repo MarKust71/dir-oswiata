@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
 import { canManageAccount } from '@/lib/permissions'
 import { resendVerificationAction } from '@/app/actions/auth'
+import { tryLinkUserToResult } from '@/lib/results-matching'
 import {
   sendAccountActivatedEmail,
   sendAccountStatusChangeAdminNotification,
@@ -28,6 +29,11 @@ async function loadTarget(userId: string) {
       email: true,
       role: true,
       status: true,
+      firstName: true,
+      lastName: true,
+      peselPositions: true,
+      peselDigits: true,
+      resultId: true,
     },
   })
 }
@@ -60,7 +66,8 @@ export async function setAccountStatusAction(
     if (
       nextStatus === AccountStatus.ACTIVE &&
       target.status !== AccountStatus.PENDING_APPROVAL &&
-      target.status !== AccountStatus.DISABLED
+      target.status !== AccountStatus.DISABLED &&
+      target.status !== AccountStatus.PENDING_EMAIL
     ) {
       return { error: 'Tego konta nie można teraz aktywować.' }
     }
@@ -74,10 +81,17 @@ export async function setAccountStatusAction(
       return { error: 'Nie możesz zmienić statusu własnego konta.' }
     }
 
+    // Administrator może aktywować konto pomijając potwierdzenie adresu
+    // e-mail linkiem aktywacyjnym.
+    const activatingFromPendingEmail =
+      nextStatus === AccountStatus.ACTIVE &&
+      target.status === AccountStatus.PENDING_EMAIL
+
     await prisma.user.update({
       where: { id: target.id },
       data: {
         status: nextStatus,
+        ...(activatingFromPendingEmail && { emailVerifiedAt: new Date() }),
         // Przy (ponownej) aktywacji dajemy uzytkownikowi swiezy komplet prob
         // wprowadzenia numeru wniosku i wyswietlen wynikow - poprzednie
         // zablokowanie zostalo juz rozwiazane przez administratora.
@@ -87,6 +101,20 @@ export async function setAccountStatusAction(
         }),
       },
     })
+
+    if (activatingFromPendingEmail) {
+      // Token na potwierdzenie e-maila jest już zbędny - konto zostało
+      // aktywowane bez niego. Próba dopasowania do wyniku, tak jak przy
+      // zwykłym potwierdzeniu adresu e-mail (zob. verifyEmailAction), żeby
+      // administrator widział aktualny stan powiązania od razu po aktywacji.
+      await prisma.verificationToken.deleteMany({
+        where: { userId: target.id },
+      })
+
+      if (target.role === Role.STUDENT && !target.resultId) {
+        await tryLinkUserToResult(target)
+      }
+    }
 
     if (nextStatus === AccountStatus.ACTIVE) {
       await sendAccountActivatedEmail(target.email)
@@ -103,7 +131,11 @@ export async function setAccountStatusAction(
 
     revalidatePath('/dashboard')
 
-    return { message: 'Zapisano zmianę statusu konta.' }
+    return {
+      message: activatingFromPendingEmail
+        ? 'Konto zostało aktywowane z pominięciem potwierdzenia adresu e-mail.'
+        : 'Zapisano zmianę statusu konta.',
+    }
   } catch (error) {
     const dbErrorState = toDbConnectionErrorState(error)
     if (dbErrorState) return dbErrorState
