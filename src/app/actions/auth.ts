@@ -23,7 +23,11 @@ import {
   sendVerificationEmail,
 } from '@/lib/mailer'
 import { tryLinkUserToResult } from '@/lib/results-matching'
-import { getMaintenanceMode, getNotificationEmails } from '@/lib/settings'
+import {
+  getMaintenanceMode,
+  getNotificationEmails,
+  getSkipEmailVerification,
+} from '@/lib/settings'
 import { AccountStatus, Role } from '@/generated/prisma/enums'
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000 // 24h
@@ -135,13 +139,18 @@ export async function registerAction(
       return { message: 'Konto z tym adresem e-mail juz istnieje.', values }
     }
 
+    const skipEmailVerification = await getSkipEmailVerification()
+
     const passwordHash = await hashPassword(password)
     const user = await prisma.user.create({
       data: {
         email,
         passwordHash,
         role: Role.STUDENT,
-        status: AccountStatus.PENDING_EMAIL,
+        status: skipEmailVerification
+          ? AccountStatus.PENDING_APPROVAL
+          : AccountStatus.PENDING_EMAIL,
+        emailVerifiedAt: skipEmailVerification ? new Date() : null,
         firstName,
         lastName,
         phone: phone || null,
@@ -150,13 +159,27 @@ export async function registerAction(
       },
     })
 
-    await issueVerificationToken(user.id, user.email)
+    if (skipEmailVerification) {
+      // Rejestracja z pominięciem potwierdzenia e-mail (przełącznik w
+      // Ustawieniach) - konto trafia od razu do stanu oczekującego na
+      // akceptację, więc próba dopasowania do wyniku i powiadomienie
+      // administratorów następują już teraz (tak jak przy zwykłym
+      // potwierdzeniu adresu e-mail - zob. verifyEmailAction).
+      await tryLinkUserToResult(user)
+
+      const notificationEmails = await getNotificationEmails()
+      await sendPendingApprovalNotification(notificationEmails, user.email)
+    } else {
+      await issueVerificationToken(user.id, user.email)
+    }
+
     await prisma.registrationAttempt.create({ data: { ip: clientIp } })
 
     return {
       success: true,
-      message:
-        'Konto zostało utworzone. Sprawdź swoją skrzynkę e-mail i potwierdź adres albo poczekaj na akceptację administratora.',
+      message: skipEmailVerification
+        ? 'Konto zostało utworzone i oczekuje na akceptację administratora. O aktywacji konta poinformujemy Cię e-mailem.'
+        : 'Konto zostało utworzone. Sprawdź swoją skrzynkę e-mail i potwierdź adres albo poczekaj na akceptację administratora.',
     }
   } catch (error) {
     if (isDatabaseConnectionError(error)) {

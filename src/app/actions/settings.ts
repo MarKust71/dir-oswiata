@@ -9,6 +9,7 @@ import {
   setNotificationEmails,
   setResultsLimits,
   setResultsVisibilityWindow,
+  setSkipEmailVerification,
 } from '@/lib/settings'
 import { NotificationEmailSchema } from '@/lib/validation'
 import { parseWarsawLocalDateTime } from '@/lib/warsaw-time'
@@ -143,6 +144,27 @@ export async function updateMaintenanceModeAction(
     revalidatePath('/settings')
     revalidatePath('/login')
     revalidatePath('/')
+
+    return {}
+  } catch (error) {
+    if (
+      isDatabaseConnectionError(error) ||
+      (error instanceof Error && error.message === DB_CONNECTION_ERROR_MESSAGE)
+    ) {
+      return { error: DB_CONNECTION_ERROR_MESSAGE }
+    }
+    throw error
+  }
+}
+
+export async function updateSkipEmailVerificationAction(
+  enabled: boolean
+): Promise<{ error?: string }> {
+  try {
+    await requireRole([Role.ADMIN])
+
+    await setSkipEmailVerification(enabled)
+    revalidatePath('/settings')
 
     return {}
   } catch (error) {

@@ -145,6 +145,28 @@ export async function setMaintenanceMode(enabled: boolean) {
   })
 }
 
+// Pomija weryfikację adresu e-mail linkiem aktywacyjnym przy rejestracji -
+// nowe konto trafia od razu do stanu oczekującego na akceptację
+// administratora/pracownika (PENDING_APPROVAL), tak jak po zwykłym
+// potwierdzeniu e-maila - zob. registerAction w src/app/actions/auth.ts.
+export const SKIP_EMAIL_VERIFICATION_KEY = 'skip_email_verification'
+
+export async function getSkipEmailVerification(): Promise<boolean> {
+  const row = await prisma.settings.findUnique({
+    where: { key: SKIP_EMAIL_VERIFICATION_KEY },
+  })
+
+  return row?.value === 'true'
+}
+
+export async function setSkipEmailVerification(enabled: boolean) {
+  await prisma.settings.upsert({
+    where: { key: SKIP_EMAIL_VERIFICATION_KEY },
+    create: { key: SKIP_EMAIL_VERIFICATION_KEY, value: String(enabled) },
+    update: { value: String(enabled) },
+  })
+}
+
 export async function getNotificationEmails(): Promise<string[]> {
   const row = await prisma.settings.findUnique({
     where: { key: NOTIFICATION_EMAILS_KEY },
