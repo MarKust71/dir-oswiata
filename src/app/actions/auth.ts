@@ -1,6 +1,7 @@
 'use server'
 
 import crypto from 'node:crypto'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { prisma } from '@/lib/prisma'
@@ -39,6 +40,31 @@ async function issueVerificationToken(userId: string, email: string) {
   await sendVerificationEmail(email, token)
 }
 
+async function getClientIp() {
+  const headersList = await headers()
+  const forwardedFor = headersList.get('x-forwarded-for')
+
+  return (
+    forwardedFor?.split(',')[0].trim() ||
+    headersList.get('x-real-ip') ||
+    'unknown'
+  )
+}
+
+// Limit rejestracji z jednego adresu IP - chroni skrzynkę SMTP przed
+// zablokowaniem przez dostawcę (OVH) za wzorzec wyglądający jak spam
+// (dużo maili weryfikacyjnych w krótkim czasie). Okno na godzinę, limit na
+// tyle wysoki, żeby nie blokować kilku uczniów rejestrujących się z jednej
+// sieci szkolnej (np. NAT pracowni komputerowej).
+const REGISTRATION_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1h
+const REGISTRATION_RATE_LIMIT_MAX = 10
+
+// Minimalny odstęp między kolejnymi wysyłkami linku weryfikacyjnego dla tego
+// samego konta - chroni przed zalaniem jednego adresata wieloma mailami przy
+// wielokrotnym kliknięciu "Wyślij ponownie" (lub bezpośrednim wywołaniem
+// akcji z pominięciem UI).
+const RESEND_COOLDOWN_MS = 60 * 1000 // 1 min
+
 export async function registerAction(
   _state: RegisterFormState,
   formData: FormData
@@ -47,6 +73,26 @@ export async function registerAction(
     return {
       message:
         'Przerwa konserwacyjna. Rejestracja nowych kont jest chwilowo niedostępna.',
+    }
+  }
+
+  const clientIp = await getClientIp()
+  const rateLimitWindowStart = new Date(
+    Date.now() - REGISTRATION_RATE_LIMIT_WINDOW_MS
+  )
+  // Sprzątanie starych wpisów przy okazji sprawdzania limitu - bez osobnego
+  // zadania czyszczącego, bo tabela i tak przechowuje tylko dane z ostatniej
+  // godziny.
+  await prisma.registrationAttempt.deleteMany({
+    where: { createdAt: { lt: rateLimitWindowStart } },
+  })
+  const recentAttempts = await prisma.registrationAttempt.count({
+    where: { ip: clientIp, createdAt: { gte: rateLimitWindowStart } },
+  })
+  if (recentAttempts >= REGISTRATION_RATE_LIMIT_MAX) {
+    return {
+      message:
+        'Zbyt wiele prób rejestracji z tego miejsca. Spróbuj ponownie za jakiś czas.',
     }
   }
 
@@ -105,6 +151,7 @@ export async function registerAction(
     })
 
     await issueVerificationToken(user.id, user.email)
+    await prisma.registrationAttempt.create({ data: { ip: clientIp } })
 
     return {
       success: true,
@@ -254,8 +301,21 @@ export async function resendVerificationAction(email: string) {
     })
 
     if (user && user.status === AccountStatus.PENDING_EMAIL) {
-      await prisma.verificationToken.deleteMany({ where: { userId: user.id } })
-      await issueVerificationToken(user.id, user.email)
+      const latestToken = await prisma.verificationToken.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+      })
+
+      const cooldownActive =
+        latestToken &&
+        Date.now() - latestToken.createdAt.getTime() < RESEND_COOLDOWN_MS
+
+      if (!cooldownActive) {
+        await prisma.verificationToken.deleteMany({
+          where: { userId: user.id },
+        })
+        await issueVerificationToken(user.id, user.email)
+      }
     }
   } catch (error) {
     if (isDatabaseConnectionError(error)) {

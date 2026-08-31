@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
 import { canManageAccount } from '@/lib/permissions'
+import { resendVerificationAction } from '@/app/actions/auth'
 import {
   sendAccountActivatedEmail,
   sendAccountStatusChangeAdminNotification,
@@ -103,6 +104,33 @@ export async function setAccountStatusAction(
     revalidatePath('/dashboard')
 
     return { message: 'Zapisano zmianę statusu konta.' }
+  } catch (error) {
+    const dbErrorState = toDbConnectionErrorState(error)
+    if (dbErrorState) return dbErrorState
+    throw error
+  }
+}
+
+export async function resendVerificationEmailAction(
+  userId: string
+): Promise<AdminActionState> {
+  try {
+    const actor = await requireRole([Role.ADMIN, Role.USER])
+
+    const target = await loadTarget(userId)
+    if (!target) return { error: 'Nie znaleziono konta.' }
+
+    if (!canManageAccount(actor, target)) {
+      return { error: 'Brak uprawnień do zarządzania tym kontem.' }
+    }
+
+    if (target.status !== AccountStatus.PENDING_EMAIL) {
+      return { error: 'To konto nie oczekuje na potwierdzenie adresu e-mail.' }
+    }
+
+    await resendVerificationAction(target.email)
+
+    return { message: 'Link aktywacyjny został wysłany ponownie.' }
   } catch (error) {
     const dbErrorState = toDbConnectionErrorState(error)
     if (dbErrorState) return dbErrorState
