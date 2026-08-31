@@ -6,6 +6,10 @@ import { prisma } from '@/lib/prisma'
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from '@/lib/contact'
 import { formatWarsawTimestamp } from '@/lib/warsaw-time'
 import { logEvent } from '@/lib/event-log'
+import {
+  getAwsDailySendLimit,
+  getAwsMaxSendRatePerSecond,
+} from '@/lib/settings'
 import { EventType } from '@/generated/prisma/enums'
 
 const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM, APP_URL } =
@@ -43,34 +47,50 @@ function getTransporter() {
   })
 }
 
-// Dostawca SMTP (OVH) dopuszcza maks. 200 e-maili/h dla tej skrzynki -
-// przekroczenie tego twardego limitu skutkowało w przeszłości zablokowaniem
-// konta jako podejrzanego o spam. Trzymamy się z zapasem poniżej limitu, bo
-// ze skrzynki mogą też korzystać inne procesy poza tą aplikacją.
-const HOURLY_SEND_LIMIT = 180
-const HOURLY_SEND_WINDOW_MS = 60 * 60 * 1000
+// AWS SES narzuca dwa niezależne ograniczenia (widoczne w konsoli SES:
+// Account dashboard -> Sending limits) - dzienną kwotę wysyłki i maksymalne
+// tempo wysyłania. Wartości konfigurowalne w Ustawieniach (zob.
+// src/lib/settings.ts) - domyślnie odpowiadają trybowi sandbox SES (200/24h,
+// 1 mail/s), z zapasem poniżej twardego limitu, bo skrzynki może używać też
+// coś poza tą aplikacją.
+const DAILY_SEND_WINDOW_MS = 24 * 60 * 60 * 1000
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 // Dowolna stała, unikalna w skali aplikacji - identyfikuje blokadę używaną
 // tylko do serializacji rezerwacji miejsca w limicie wysyłki.
 const SEND_LIMIT_LOCK_KEY = 727001
 
-// Sprawdzenie limitu i zapis licznika muszą być jedną, niepodzielną operacją -
-// w przeciwnym razie równoległe wywołania sendMail() (np. powiadomienie do
-// kilku adresów administracyjnych naraz przez Promise.all, albo kilka
-// równoczesnych żądań na różnych instancjach serverless) mogą odczytać ten
-// sam licznik, zanim którekolwiek zdąży go zwiększyć, i wszystkie przejść
-// sprawdzenie - realnie przekraczając limit mimo pozornej kontroli.
-// pg_advisory_xact_lock serializuje te rezerwacje na czas transakcji i
-// zwalnia się sam przy jej zakończeniu (commit lub rollback).
-async function tryReserveSendSlot(): Promise<boolean> {
-  return prisma.$transaction(async (tx) => {
+// Sprawdzenie limitu, odczekanie na tempo wysyłki i zapis licznika muszą być
+// jedną, niepodzielną operacją - w przeciwnym razie równoległe wywołania
+// sendMail() (np. powiadomienie do kilku adresów administracyjnych naraz
+// przez Promise.all, albo kilka równoczesnych żądań na różnych instancjach
+// serverless) mogłyby odczytać ten sam licznik, zanim którekolwiek zdąży go
+// zwiększyć (przekroczenie dziennej kwoty), albo wysłać maile bliżej siebie
+// w czasie niż pozwala maksymalne tempo SES (odrzucenie/throttling).
+// pg_advisory_xact_lock serializuje te rezerwacje na czas transakcji
+// (włącznie z ewentualnym odczekaniem) i zwalnia się sam przy jej
+// zakończeniu (commit lub rollback).
+async function tryReserveSendSlot(): Promise<{
+  ok: boolean
+  dailyLimit: number
+}> {
+  const [dailyLimit, maxRatePerSecond] = await Promise.all([
+    getAwsDailySendLimit(),
+    getAwsMaxSendRatePerSecond(),
+  ])
+  const minIntervalMs = Math.ceil(1000 / maxRatePerSecond)
+
+  const ok = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SEND_LIMIT_LOCK_KEY})`
 
-    const windowStart = new Date(Date.now() - HOURLY_SEND_WINDOW_MS)
+    const windowStart = new Date(Date.now() - DAILY_SEND_WINDOW_MS)
 
     // Sprzątanie starych wpisów przy okazji sprawdzania limitu - bez osobnego
     // zadania czyszczącego, bo tabela i tak przechowuje tylko dane z
-    // ostatniej godziny.
+    // ostatniej doby.
     await tx.emailSendLog.deleteMany({
       where: { createdAt: { lt: windowStart } },
     })
@@ -78,16 +98,28 @@ async function tryReserveSendSlot(): Promise<boolean> {
       where: { createdAt: { gte: windowStart } },
     })
 
-    if (sentInWindow >= HOURLY_SEND_LIMIT) return false
+    if (sentInWindow >= dailyLimit) return false
+
+    const lastSend = await tx.emailSendLog.findFirst({
+      orderBy: { createdAt: 'desc' },
+    })
+    if (lastSend) {
+      const elapsedMs = Date.now() - lastSend.createdAt.getTime()
+      if (elapsedMs < minIntervalMs) {
+        await sleep(minIntervalMs - elapsedMs)
+      }
+    }
 
     await tx.emailSendLog.create({ data: {} })
 
     return true
   })
+
+  return { ok, dailyLimit }
 }
 
 // Jedyne miejsce, które faktycznie woła transporter.sendMail() - dzięki temu
-// godzinowy limit wysyłki jest pilnowany dla całej aplikacji naraz,
+// dzienna kwota i tempo wysyłki są pilnowane dla całej aplikacji naraz,
 // niezależnie od tego, która funkcja poniżej wywołała wysyłkę.
 async function sendMail({
   to,
@@ -115,8 +147,10 @@ async function sendMail({
     return
   }
 
-  if (!(await tryReserveSendSlot())) {
-    const message = `Pominięto wysyłkę (${logLabel}) do ${to} - osiągnięto godzinowy limit ${HOURLY_SEND_LIMIT} maili (limit dostawcy: 200/h).`
+  const { ok: canSend, dailyLimit } = await tryReserveSendSlot()
+
+  if (!canSend) {
+    const message = `Pominięto wysyłkę (${logLabel}) do ${to} - osiągnięto dzienny limit ${dailyLimit} maili.`
     console.error(`[mailer] ${message}`)
 
     await logEvent({

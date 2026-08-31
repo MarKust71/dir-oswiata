@@ -189,6 +189,50 @@ export async function setSkipEmailVerification(enabled: boolean) {
   })
 }
 
+// Limity wysyłki AWS SES (dzienna kwota i maksymalne tempo/s) - zob.
+// src/lib/mailer.ts. Widoczne w konsoli SES: Account dashboard -> Sending
+// limits. Wartości domyślne odpowiadają trybowi sandbox SES.
+export const AWS_DAILY_SEND_LIMIT_KEY = 'aws_daily_send_limit'
+export const AWS_MAX_SEND_RATE_PER_SECOND_KEY = 'aws_max_send_rate_per_second'
+
+const DEFAULT_AWS_DAILY_SEND_LIMIT = 180
+const DEFAULT_AWS_MAX_SEND_RATE_PER_SECOND = 1
+
+export function getAwsDailySendLimit() {
+  return getSettingPositiveInt(
+    AWS_DAILY_SEND_LIMIT_KEY,
+    DEFAULT_AWS_DAILY_SEND_LIMIT
+  )
+}
+
+export function getAwsMaxSendRatePerSecond() {
+  return getSettingPositiveInt(
+    AWS_MAX_SEND_RATE_PER_SECOND_KEY,
+    DEFAULT_AWS_MAX_SEND_RATE_PER_SECOND
+  )
+}
+
+export async function setAwsSendLimits(
+  dailySendLimit: number,
+  maxSendRatePerSecond: number
+) {
+  await prisma.$transaction([
+    prisma.settings.upsert({
+      where: { key: AWS_DAILY_SEND_LIMIT_KEY },
+      create: { key: AWS_DAILY_SEND_LIMIT_KEY, value: String(dailySendLimit) },
+      update: { value: String(dailySendLimit) },
+    }),
+    prisma.settings.upsert({
+      where: { key: AWS_MAX_SEND_RATE_PER_SECOND_KEY },
+      create: {
+        key: AWS_MAX_SEND_RATE_PER_SECOND_KEY,
+        value: String(maxSendRatePerSecond),
+      },
+      update: { value: String(maxSendRatePerSecond) },
+    }),
+  ])
+}
+
 export async function getNotificationEmails(): Promise<string[]> {
   const row = await prisma.settings.findUnique({
     where: { key: NOTIFICATION_EMAILS_KEY },

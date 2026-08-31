@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { requireRole } from '@/lib/dal'
 import {
+  setAwsSendLimits,
   setEventLogRetentionDays,
   setInactivityTimeoutSeconds,
   setMaintenanceMode,
@@ -290,6 +291,42 @@ export async function updateEventLogRetentionAction(
     revalidatePath('/settings/events')
 
     return { message: 'Zapisano okres przechowywania dziennika zdarzeń.' }
+  } catch (error) {
+    if (
+      isDatabaseConnectionError(error) ||
+      (error instanceof Error && error.message === DB_CONNECTION_ERROR_MESSAGE)
+    ) {
+      return { error: DB_CONNECTION_ERROR_MESSAGE }
+    }
+    throw error
+  }
+}
+
+export async function updateAwsSendLimitsAction(
+  _state: SettingsActionState,
+  formData: FormData
+): Promise<SettingsActionState> {
+  try {
+    const actor = await requireRole([Role.ADMIN])
+
+    const dailySendLimit = parsePositiveInt(formData.get('dailySendLimit'))
+    const maxSendRatePerSecond = parsePositiveInt(
+      formData.get('maxSendRatePerSecond')
+    )
+
+    if (dailySendLimit === null || maxSendRatePerSecond === null) {
+      return { error: 'Podaj dodatnie liczby całkowite dla obu limitów.' }
+    }
+
+    await setAwsSendLimits(dailySendLimit, maxSendRatePerSecond)
+    await logSettingsChange(
+      actor,
+      `Zmieniono limity wysyłki AWS SES (${actor.email}).`,
+      { setting: 'aws_send_limits', dailySendLimit, maxSendRatePerSecond }
+    )
+    revalidatePath('/settings')
+
+    return { message: 'Zapisano limity wysyłki AWS SES.' }
   } catch (error) {
     if (
       isDatabaseConnectionError(error) ||
