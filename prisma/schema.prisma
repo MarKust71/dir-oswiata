@@ -91,3 +91,15 @@ model VerificationToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
+
+// Rejestruje udane próby rejestracji (te, które wysłały e-mail weryfikacyjny)
+// wg adresu IP - do ograniczenia tempa rejestracji (zob. registerAction w
+// src/app/actions/auth.ts). Dane krótkotrwałe (czyszczone po upływie okna
+// limitu) - celowo pominięte w kopii zapasowej bazy (src/lib/db-backup.ts).
+model RegistrationAttempt {
+  id        String   @id @default(cuid())
+  ip        String
+  createdAt DateTime @default(now())
+
+  @@index([ip, createdAt])
+}
