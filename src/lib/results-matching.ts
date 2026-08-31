@@ -56,6 +56,38 @@ function resultMatchesUser(user: LinkableUser, result: LinkedResult) {
 }
 
 /**
+ * Sprawdza, czy podane dane (imię, nazwisko, ujawnione cyfry numeru PESEL)
+ * pasują do wyniku, który jest już powiązany z innym kontem - używane przy
+ * rejestracji, żeby nie dopuścić do założenia drugiego konta na ten sam
+ * wynik egzaminu. Zwraca e-mail konta, do którego wynik jest już przypisany,
+ * albo null, jeśli nie znaleziono takiego dopasowania.
+ */
+export async function findAccountAlreadyLinkedToMatchingResult(candidate: {
+  firstName: string
+  lastName: string
+  peselPositions: number[]
+  peselDigits: string[]
+}): Promise<string | null> {
+  if (candidate.peselPositions.length === 0) return null
+
+  const linkedResults = await prisma.results.findMany({
+    where: { user: { isNot: null } },
+    select: {
+      firstName: true,
+      lastName: true,
+      pesel: true,
+      user: { select: { email: true } },
+    },
+  })
+
+  const match = linkedResults.find((result) =>
+    resultMatchesUser({ id: '', ...candidate }, result)
+  )
+
+  return match?.user?.email ?? null
+}
+
+/**
  * Próbuje automatycznie skojarzyć konto z rekordem w tabeli Results - dopasowanie
  * po imieniu, nazwisku i cyfrach numeru PESEL ujawnionych przy rejestracji.
  * Łączy tylko wtedy, gdy pasuje dokładnie jeden, jeszcze niepowiązany z żadnym

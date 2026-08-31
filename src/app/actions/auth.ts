@@ -19,15 +19,21 @@ import {
   type LoginFormState,
 } from '@/lib/validation'
 import {
+  sendDuplicateResultRegistrationAttemptAdminNotification,
+  sendDuplicateResultRegistrationAttemptUserEmail,
   sendPendingApprovalNotification,
   sendVerificationEmail,
 } from '@/lib/mailer'
-import { tryLinkUserToResult } from '@/lib/results-matching'
+import {
+  findAccountAlreadyLinkedToMatchingResult,
+  tryLinkUserToResult,
+} from '@/lib/results-matching'
 import {
   getMaintenanceMode,
   getNotificationEmails,
   getSkipEmailVerification,
 } from '@/lib/settings'
+import { maskEmail } from '@/lib/mask-email'
 import { AccountStatus, Role } from '@/generated/prisma/enums'
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000 // 24h
@@ -137,6 +143,37 @@ export async function registerAction(
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
       return { message: 'Konto z tym adresem e-mail juz istnieje.', values }
+    }
+
+    // Zanim założymy nowe konto, sprawdzamy, czy podane dane (imię, nazwisko,
+    // ujawnione cyfry numeru PESEL) nie pasują już do wyniku przypisanego do
+    // innego, istniejącego konta - w takim wypadku nie tworzymy konta.
+    const linkedAccountEmail = await findAccountAlreadyLinkedToMatchingResult({
+      firstName,
+      lastName,
+      peselPositions: validated.data.peselPositions,
+      peselDigits: validated.data.peselDigits,
+    })
+
+    if (linkedAccountEmail) {
+      const message = `Wynik egzaminu tej osoby został już wcześniej przypisany do innego konta - ${maskEmail(linkedAccountEmail)}. Powiadomimy tamtego użytkownika o próbie sprawdzenia wyniku. Jeśli uważasz, że to pomyłka, skontaktuj się z DIR.`
+
+      console.warn(
+        `[auth] Zablokowano rejestrację (${email}) - dane pasują do wyniku już przypisanego do konta ${linkedAccountEmail}.`
+      )
+
+      await sendDuplicateResultRegistrationAttemptUserEmail(linkedAccountEmail)
+
+      const notificationEmails = await getNotificationEmails()
+      await sendDuplicateResultRegistrationAttemptAdminNotification(
+        notificationEmails,
+        linkedAccountEmail,
+        email
+      )
+
+      await prisma.registrationAttempt.create({ data: { ip: clientIp } })
+
+      return { message, values }
     }
 
     const skipEmailVerification = await getSkipEmailVerification()

@@ -344,3 +344,43 @@ export async function sendResultsViewLimitReachedUserEmail(email: string) {
     logLabel: 'mail o zablokowaniu konta (limit wyświetleń)',
   })
 }
+
+export async function sendDuplicateResultRegistrationAttemptUserEmail(
+  email: string
+) {
+  await sendMail({
+    to: email,
+    subject: 'Próba założenia nowego konta z Twoimi danymi',
+    text: withFooter(
+      'Zanotowaliśmy próbę założenia nowego konta pozwalającego na poznanie Twojego wyniku egzaminu.'
+    ),
+    html: withFooterHtml(
+      '<p>Zanotowaliśmy próbę założenia nowego konta pozwalającego na poznanie Twojego wyniku egzaminu.</p>'
+    ),
+    logLabel: 'mail o próbie rejestracji duplikatu konta',
+  })
+}
+
+export async function sendDuplicateResultRegistrationAttemptAdminNotification(
+  adminEmails: string[],
+  existingAccountEmail: string,
+  attemptedEmail: string
+) {
+  if (adminEmails.length === 0) return
+
+  const message = `Zablokowano próbę rejestracji konta (${attemptedEmail}) - podane dane (imię, nazwisko, cyfry numeru PESEL) pasują do wyniku już przypisanego do konta ${existingAccountEmail}.`
+  const text = withFooter(message)
+  const html = withFooterHtml(`<p>${message}</p>`)
+
+  await Promise.all(
+    adminEmails.map((to) =>
+      sendMail({
+        to,
+        subject: 'Zablokowana próba rejestracji - duplikat wyniku',
+        text,
+        html,
+        logLabel: 'powiadomienie o próbie rejestracji duplikatu konta',
+      })
+    )
+  )
+}
