@@ -384,3 +384,43 @@ export async function sendDuplicateResultRegistrationAttemptAdminNotification(
     )
   )
 }
+
+export async function sendDuplicateResultProfileEditAttemptUserEmail(
+  email: string
+) {
+  await sendMail({
+    to: email,
+    subject: 'Próba podłączenia innego konta do Twojego wyniku',
+    text: withFooter(
+      'Zanotowaliśmy próbę podłączenia innego konta do Twojego wyniku egzaminu poprzez edycję danych profilu. Twoje konto i wynik pozostają bezpieczne.'
+    ),
+    html: withFooterHtml(
+      '<p>Zanotowaliśmy próbę podłączenia innego konta do Twojego wyniku egzaminu poprzez edycję danych profilu. Twoje konto i wynik pozostają bezpieczne.</p>'
+    ),
+    logLabel: 'mail o próbie podłączenia innego konta do wyniku',
+  })
+}
+
+export async function sendDuplicateResultProfileEditAttemptAdminNotification(
+  adminEmails: string[],
+  existingAccountEmail: string,
+  blockedAccountEmail: string
+) {
+  if (adminEmails.length === 0) return
+
+  const message = `Zablokowano konto ${blockedAccountEmail} po edycji danych w panelu - poprawione dane (imię, nazwisko, cyfry numeru PESEL) pasują do wyniku już przypisanego do konta ${existingAccountEmail}.`
+  const text = withFooter(message)
+  const html = withFooterHtml(`<p>${message}</p>`)
+
+  await Promise.all(
+    adminEmails.map((to) =>
+      sendMail({
+        to,
+        subject: 'Zablokowane konto - próba podłączenia do cudzego wyniku',
+        text,
+        html,
+        logLabel: 'powiadomienie o zablokowaniu konta (cudzy wynik)',
+      })
+    )
+  )
+}

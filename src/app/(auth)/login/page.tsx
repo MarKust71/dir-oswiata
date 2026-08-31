@@ -50,6 +50,13 @@ export default async function LoginPage(props: PageProps<'/login'>) {
               ponownej aktywacji przez administratora.
             </p>
           )}
+          {reason === 'duplicate-result-block' && (
+            <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              Podane dane odpowiadają wynikowi egzaminu przypisanemu już do
+              innego konta. Ze względów bezpieczeństwa Twoje konto zostało
+              zablokowane. Jeśli uważasz, że to pomyłka, skontaktuj się z DIR.
+            </p>
+          )}
           <LoginForm hideRegisterLink={maintenanceMode} />
         </CardContent>
       </Card>

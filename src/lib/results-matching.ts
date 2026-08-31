@@ -58,16 +58,21 @@ function resultMatchesUser(user: LinkableUser, result: LinkedResult) {
 /**
  * Sprawdza, czy podane dane (imię, nazwisko, ujawnione cyfry numeru PESEL)
  * pasują do wyniku, który jest już powiązany z innym kontem - używane przy
- * rejestracji, żeby nie dopuścić do założenia drugiego konta na ten sam
- * wynik egzaminu. Zwraca e-mail konta, do którego wynik jest już przypisany,
- * albo null, jeśli nie znaleziono takiego dopasowania.
+ * rejestracji oraz przy poprawie danych w panelu, żeby nie dopuścić do
+ * podłączenia się do wyniku przypisanego już do cudzego konta.
+ * `excludeUserId` pozwala pominąć własne konto (przy poprawie danych - żeby
+ * nie zgłaszać jako "cudzego" wyniku już powiązanego z tym samym kontem).
+ * Zwraca e-mail konta, do którego wynik jest już przypisany, albo null.
  */
-export async function findAccountAlreadyLinkedToMatchingResult(candidate: {
-  firstName: string
-  lastName: string
-  peselPositions: number[]
-  peselDigits: string[]
-}): Promise<string | null> {
+export async function findAccountAlreadyLinkedToMatchingResult(
+  candidate: {
+    firstName: string
+    lastName: string
+    peselPositions: number[]
+    peselDigits: string[]
+  },
+  excludeUserId?: string
+): Promise<string | null> {
   if (candidate.peselPositions.length === 0) return null
 
   const linkedResults = await prisma.results.findMany({
@@ -76,12 +81,14 @@ export async function findAccountAlreadyLinkedToMatchingResult(candidate: {
       firstName: true,
       lastName: true,
       pesel: true,
-      user: { select: { email: true } },
+      user: { select: { id: true, email: true } },
     },
   })
 
-  const match = linkedResults.find((result) =>
-    resultMatchesUser({ id: '', ...candidate }, result)
+  const match = linkedResults.find(
+    (result) =>
+      result.user?.id !== excludeUserId &&
+      resultMatchesUser({ id: '', ...candidate }, result)
   )
 
   return match?.user?.email ?? null
