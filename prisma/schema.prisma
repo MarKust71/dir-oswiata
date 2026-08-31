@@ -103,3 +103,15 @@ model RegistrationAttempt {
 
   @@index([ip, createdAt])
 }
+
+// Rejestruje każdą faktyczną próbę wysyłki e-maila (niezależnie od
+// powodzenia) - do pilnowania godzinowego limitu wysyłki narzuconego przez
+// dostawcę SMTP (OVH: 200 e-maili/h dla tej skrzynki) - zob. src/lib/mailer.ts.
+// Dane krótkotrwałe - celowo pominięte w kopii zapasowej bazy
+// (src/lib/db-backup.ts).
+model EmailSendLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

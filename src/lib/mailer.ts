@@ -2,6 +2,7 @@ import 'server-only'
 import nodemailer from 'nodemailer'
 
 import packageJson from '../../package.json'
+import { prisma } from '@/lib/prisma'
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from '@/lib/contact'
 import { formatWarsawTimestamp } from '@/lib/warsaw-time'
 
@@ -40,15 +41,61 @@ function getTransporter() {
   })
 }
 
-export async function sendVerificationEmail(email: string, token: string) {
-  const verifyUrl = `${APP_URL ?? 'http://localhost:3000'}/verify-email/${token}`
+// Dostawca SMTP (OVH) dopuszcza maks. 200 e-maili/h dla tej skrzynki -
+// przekroczenie tego twardego limitu skutkowało w przeszłości zablokowaniem
+// konta jako podejrzanego o spam. Trzymamy się z zapasem poniżej limitu, bo
+// ze skrzynki mogą też korzystać inne procesy poza tą aplikacją.
+const HOURLY_SEND_LIMIT = 180
+const HOURLY_SEND_WINDOW_MS = 60 * 60 * 1000
+
+async function canSendMoreThisHour() {
+  const windowStart = new Date(Date.now() - HOURLY_SEND_WINDOW_MS)
+
+  // Sprzątanie starych wpisów przy okazji sprawdzania limitu - bez osobnego
+  // zadania czyszczącego, bo tabela i tak przechowuje tylko dane z ostatniej
+  // godziny.
+  await prisma.emailSendLog.deleteMany({
+    where: { createdAt: { lt: windowStart } },
+  })
+  const sentInWindow = await prisma.emailSendLog.count({
+    where: { createdAt: { gte: windowStart } },
+  })
+
+  return sentInWindow < HOURLY_SEND_LIMIT
+}
+
+// Jedyne miejsce, które faktycznie woła transporter.sendMail() - dzięki temu
+// godzinowy limit wysyłki jest pilnowany dla całej aplikacji naraz,
+// niezależnie od tego, która funkcja poniżej wywołała wysyłkę.
+async function sendMail({
+  to,
+  subject,
+  text,
+  html,
+  logLabel,
+}: {
+  to: string
+  subject: string
+  text: string
+  html: string
+  logLabel: string
+}) {
   const transporter = getTransporter()
 
   if (!transporter) {
-    // SMTP nie jest skonfigurowany (brak SMTP_HOST/SMTP_USER/SMTP_PASSWORD w .env.local) -
-    // wypisujemy link w logach serwera, żeby można było ręcznie dokończyć weryfikację w trakcie developmentu.
+    // SMTP nie jest skonfigurowany (brak SMTP_HOST/SMTP_USER/SMTP_PASSWORD w
+    // .env.local) - wypisujemy treść w logach, żeby np. link weryfikacyjny
+    // dało się ręcznie odczytać w trakcie developmentu.
     console.warn(
-      `[mailer] SMTP nie jest skonfigurowany. Link weryfikacyjny dla ${email}: ${verifyUrl}`
+      `[mailer] SMTP nie jest skonfigurowany (${logLabel} -> ${to}). ${text}`
+    )
+
+    return
+  }
+
+  if (!(await canSendMoreThisHour())) {
+    console.error(
+      `[mailer] Pominięto wysyłkę (${logLabel}) do ${to} - osiągnięto godzinowy limit ${HOURLY_SEND_LIMIT} maili (limit dostawcy: 200/h).`
     )
 
     return
@@ -57,28 +104,42 @@ export async function sendVerificationEmail(email: string, token: string) {
   try {
     const info = await transporter.sendMail({
       from: SMTP_FROM || SMTP_USER,
-      to: email,
-      subject: 'Potwierdź swój adres e-mail',
-      text: withFooter(
-        `Kliknij w link, aby potwierdzić adres e-mail: ${verifyUrl}`
-      ),
-      html: withFooterHtml(
-        `<p>Kliknij link, aby potwierdzić adres e-mail:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`
-      ),
+      to,
+      subject,
+      text,
+      html,
     })
 
     console.log(
-      `[mailer] Wysłano mail weryfikacyjny do ${email} (messageId: ${info.messageId}, response: ${info.response})`
+      `[mailer] Wysłano (${logLabel}) do ${to} (messageId: ${info.messageId}, response: ${info.response})`
     )
   } catch (error) {
     // Blad wysylki (np. odrzucony adres odbiorcy) nie moze wywalic calej
-    // rejestracji - konto jest juz zapisane w bazie, uzytkownik moze
-    // poprosic o ponowne wyslanie linku.
+    // operacji, ktora go wywolala - jest juz zapisana w bazie niezaleznie od
+    // tego, czy mail dotarl.
     console.error(
-      `[mailer] Nie udało się wysłać maila weryfikacyjnego do ${email}:`,
+      `[mailer] Nie udało się wysłać (${logLabel}) do ${to}:`,
       error
     )
+  } finally {
+    await prisma.emailSendLog.create({ data: {} })
   }
+}
+
+export async function sendVerificationEmail(email: string, token: string) {
+  const verifyUrl = `${APP_URL ?? 'http://localhost:3000'}/verify-email/${token}`
+
+  await sendMail({
+    to: email,
+    subject: 'Potwierdź swój adres e-mail',
+    text: withFooter(
+      `Kliknij w link, aby potwierdzić adres e-mail: ${verifyUrl}`
+    ),
+    html: withFooterHtml(
+      `<p>Kliknij link, aby potwierdzić adres e-mail:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`
+    ),
+    logLabel: 'mail weryfikacyjny',
+  })
 }
 
 export async function sendPendingApprovalNotification(
@@ -90,76 +151,34 @@ export async function sendPendingApprovalNotification(
   const message = `${formatWarsawTimestamp(new Date())} - użytkownik ${userEmail} oczekuje na akceptację`
   const text = withFooter(message)
   const html = withFooterHtml(`<p>${message}</p>`)
-  const transporter = getTransporter()
-
-  if (!transporter) {
-    console.warn(
-      `[mailer] SMTP nie jest skonfigurowany. Powiadomienie: ${text}`
-    )
-
-    return
-  }
 
   await Promise.all(
-    adminEmails.map(async (to) => {
-      try {
-        const info = await transporter.sendMail({
-          from: SMTP_FROM || SMTP_USER,
-          to,
-          subject: 'Nowe konto oczekuje na akceptację',
-          text,
-          html,
-        })
-
-        console.log(
-          `[mailer] Wysłano powiadomienie o oczekującym koncie do ${to} (messageId: ${info.messageId}, response: ${info.response})`
-        )
-      } catch (error) {
-        console.error(
-          `[mailer] Nie udało się wysłać powiadomienia o oczekującym koncie do ${to}:`,
-          error
-        )
-      }
-    })
+    adminEmails.map((to) =>
+      sendMail({
+        to,
+        subject: 'Nowe konto oczekuje na akceptację',
+        text,
+        html,
+        logLabel: 'powiadomienie o oczekującym koncie',
+      })
+    )
   )
 }
 
 export async function sendAccountActivatedEmail(email: string) {
   const loginUrl = `${APP_URL ?? 'http://localhost:3000'}/login`
-  const transporter = getTransporter()
 
-  if (!transporter) {
-    console.warn(
-      `[mailer] SMTP nie jest skonfigurowany. Konto ${email} zostało aktywowane.`
-    )
-
-    return
-  }
-
-  try {
-    const info = await transporter.sendMail({
-      from: SMTP_FROM || SMTP_USER,
-      to: email,
-      subject: 'Twoje konto zostało aktywowane',
-      text: withFooter(
-        `Twoje konto jest już aktywne. Możesz się zalogować: ${loginUrl}`
-      ),
-      html: withFooterHtml(
-        `<p>Twoje konto jest już aktywne. Możesz się zalogować:</p><p><a href="${loginUrl}">${loginUrl}</a></p>`
-      ),
-    })
-
-    console.log(
-      `[mailer] Wysłano mail o aktywacji do ${email} (messageId: ${info.messageId}, response: ${info.response})`
-    )
-  } catch (error) {
-    // Blad wysylki nie moze zablokowac aktywacji konta przez administratora -
-    // konto jest juz aktywne w bazie niezaleznie od tego, czy mail dotarl.
-    console.error(
-      `[mailer] Nie udało się wysłać maila o aktywacji konta do ${email}:`,
-      error
-    )
-  }
+  await sendMail({
+    to: email,
+    subject: 'Twoje konto zostało aktywowane',
+    text: withFooter(
+      `Twoje konto jest już aktywne. Możesz się zalogować: ${loginUrl}`
+    ),
+    html: withFooterHtml(
+      `<p>Twoje konto jest już aktywne. Możesz się zalogować:</p><p><a href="${loginUrl}">${loginUrl}</a></p>`
+    ),
+    logLabel: 'mail o aktywacji',
+  })
 }
 
 export async function sendAccountStatusChangeAdminNotification(
@@ -175,39 +194,20 @@ export async function sendAccountStatusChangeAdminNotification(
   const message = `${formatWarsawTimestamp(new Date())}: Użytkownik ${actorEmail} (rola: ${actorRoleLabel}) ${verb} konto użytkownika ${targetEmail}.`
   const text = withFooter(message)
   const html = withFooterHtml(`<p>${message}</p>`)
-  const transporter = getTransporter()
-
-  if (!transporter) {
-    console.warn(
-      `[mailer] SMTP nie jest skonfigurowany. Powiadomienie: ${text}`
-    )
-
-    return
-  }
+  const subject = activated
+    ? 'Konto użytkownika zostało aktywowane'
+    : 'Konto użytkownika zostało dezaktywowane'
 
   await Promise.all(
-    adminEmails.map(async (to) => {
-      try {
-        const info = await transporter.sendMail({
-          from: SMTP_FROM || SMTP_USER,
-          to,
-          subject: activated
-            ? 'Konto użytkownika zostało aktywowane'
-            : 'Konto użytkownika zostało dezaktywowane',
-          text,
-          html,
-        })
-
-        console.log(
-          `[mailer] Wysłano powiadomienie o zmianie statusu konta do ${to} (messageId: ${info.messageId}, response: ${info.response})`
-        )
-      } catch (error) {
-        console.error(
-          `[mailer] Nie udało się wysłać powiadomienia o zmianie statusu konta do ${to}:`,
-          error
-        )
-      }
-    })
+    adminEmails.map((to) =>
+      sendMail({
+        to,
+        subject,
+        text,
+        html,
+        logLabel: 'powiadomienie o zmianie statusu konta',
+      })
+    )
   )
 }
 
@@ -220,74 +220,32 @@ export async function sendAccountLockedAdminNotification(
   const message = `Konto użytkownika "${userEmail}" zostało zablokowane ze względu na trzykrotne wprowadzenie błędnego numeru wniosku.`
   const text = withFooter(message)
   const html = withFooterHtml(`<p>${message}</p>`)
-  const transporter = getTransporter()
-
-  if (!transporter) {
-    console.warn(
-      `[mailer] SMTP nie jest skonfigurowany. Powiadomienie: ${text}`
-    )
-
-    return
-  }
 
   await Promise.all(
-    adminEmails.map(async (to) => {
-      try {
-        const info = await transporter.sendMail({
-          from: SMTP_FROM || SMTP_USER,
-          to,
-          subject: 'Konto użytkownika zostało zablokowane',
-          text,
-          html,
-        })
-
-        console.log(
-          `[mailer] Wysłano powiadomienie o zablokowaniu konta do ${to} (messageId: ${info.messageId}, response: ${info.response})`
-        )
-      } catch (error) {
-        console.error(
-          `[mailer] Nie udało się wysłać powiadomienia o zablokowaniu konta do ${to}:`,
-          error
-        )
-      }
-    })
+    adminEmails.map((to) =>
+      sendMail({
+        to,
+        subject: 'Konto użytkownika zostało zablokowane',
+        text,
+        html,
+        logLabel: 'powiadomienie o zablokowaniu konta',
+      })
+    )
   )
 }
 
 export async function sendAccountLockedUserEmail(email: string) {
-  const text = withFooter(
-    'Twoje konto "DIR Oświata" zostało zablokowane. Skontaktuj się z administratorem.'
-  )
-  const transporter = getTransporter()
-
-  if (!transporter) {
-    console.warn(`[mailer] SMTP nie jest skonfigurowany. ${text}`)
-
-    return
-  }
-
-  try {
-    const info = await transporter.sendMail({
-      from: SMTP_FROM || SMTP_USER,
-      to: email,
-      subject: 'Twoje konto zostało zablokowane',
-      text,
-      html: withFooterHtml(
-        '<p>Twoje konto "DIR Oświata" zostało zablokowane. Skontaktuj się z administratorem.</p>'
-      ),
-    })
-
-    console.log(
-      `[mailer] Wysłano mail o zablokowaniu konta do ${email} (messageId: ${info.messageId}, response: ${info.response})`
-    )
-  } catch (error) {
-    // Blad wysylki nie moze cofnac zablokowania konta - konto pozostaje
-    // zablokowane w bazie niezaleznie od tego, czy mail dotarl.
-    console.error(
-      `[mailer] Nie udało się wysłać maila o zablokowaniu konta do ${email}:`,
-      error
-    )
-  }
+  await sendMail({
+    to: email,
+    subject: 'Twoje konto zostało zablokowane',
+    text: withFooter(
+      'Twoje konto "DIR Oświata" zostało zablokowane. Skontaktuj się z administratorem.'
+    ),
+    html: withFooterHtml(
+      '<p>Twoje konto "DIR Oświata" zostało zablokowane. Skontaktuj się z administratorem.</p>'
+    ),
+    logLabel: 'mail o zablokowaniu konta',
+  })
 }
 
 export async function sendResultsViewLimitReachedAdminNotification(
@@ -299,37 +257,17 @@ export async function sendResultsViewLimitReachedAdminNotification(
   const message = `Konto użytkownika "${userEmail}" zostało zablokowane ze względu na wykorzystanie limitu 3 wyświetleń wyników.`
   const text = withFooter(message)
   const html = withFooterHtml(`<p>${message}</p>`)
-  const transporter = getTransporter()
-
-  if (!transporter) {
-    console.warn(
-      `[mailer] SMTP nie jest skonfigurowany. Powiadomienie: ${text}`
-    )
-
-    return
-  }
 
   await Promise.all(
-    adminEmails.map(async (to) => {
-      try {
-        const info = await transporter.sendMail({
-          from: SMTP_FROM || SMTP_USER,
-          to,
-          subject: 'Konto użytkownika zostało zablokowane',
-          text,
-          html,
-        })
-
-        console.log(
-          `[mailer] Wysłano powiadomienie o zablokowaniu konta (limit wyświetleń) do ${to} (messageId: ${info.messageId}, response: ${info.response})`
-        )
-      } catch (error) {
-        console.error(
-          `[mailer] Nie udało się wysłać powiadomienia o zablokowaniu konta (limit wyświetleń) do ${to}:`,
-          error
-        )
-      }
-    })
+    adminEmails.map((to) =>
+      sendMail({
+        to,
+        subject: 'Konto użytkownika zostało zablokowane',
+        text,
+        html,
+        logLabel: 'powiadomienie o zablokowaniu konta (limit wyświetleń)',
+      })
+    )
   )
 }
 
@@ -342,37 +280,17 @@ export async function sendMissingResultAdminNotification(
   const message = `Użytkownik "${userEmail}" zalogował się w okresie udostępniania wyników, ale nie znaleziono dla niego wyniku w bazie (dopasowanie po imieniu, nazwisku i numerze PESEL).`
   const text = withFooter(message)
   const html = withFooterHtml(`<p>${message}</p>`)
-  const transporter = getTransporter()
-
-  if (!transporter) {
-    console.warn(
-      `[mailer] SMTP nie jest skonfigurowany. Powiadomienie: ${text}`
-    )
-
-    return
-  }
 
   await Promise.all(
-    adminEmails.map(async (to) => {
-      try {
-        const info = await transporter.sendMail({
-          from: SMTP_FROM || SMTP_USER,
-          to,
-          subject: 'Brak wyniku dla użytkownika',
-          text,
-          html,
-        })
-
-        console.log(
-          `[mailer] Wysłano powiadomienie o braku wyniku do ${to} (messageId: ${info.messageId}, response: ${info.response})`
-        )
-      } catch (error) {
-        console.error(
-          `[mailer] Nie udało się wysłać powiadomienia o braku wyniku do ${to}:`,
-          error
-        )
-      }
-    })
+    adminEmails.map((to) =>
+      sendMail({
+        to,
+        subject: 'Brak wyniku dla użytkownika',
+        text,
+        html,
+        logLabel: 'powiadomienie o braku wyniku',
+      })
+    )
   )
 }
 
@@ -385,104 +303,44 @@ export async function sendProfileCorrectionAdminNotification(
   const message = `Użytkownik "${userEmail}" poprawił w panelu swoje dane (imię, nazwisko, telefon lub cyfry numeru PESEL). Konto zostało tymczasowo dezaktywowane i wymaga ponownej weryfikacji oraz aktywacji.`
   const text = withFooter(message)
   const html = withFooterHtml(`<p>${message}</p>`)
-  const transporter = getTransporter()
-
-  if (!transporter) {
-    console.warn(
-      `[mailer] SMTP nie jest skonfigurowany. Powiadomienie: ${text}`
-    )
-
-    return
-  }
 
   await Promise.all(
-    adminEmails.map(async (to) => {
-      try {
-        const info = await transporter.sendMail({
-          from: SMTP_FROM || SMTP_USER,
-          to,
-          subject: 'Konto użytkownika wymaga ponownej aktywacji',
-          text,
-          html,
-        })
-
-        console.log(
-          `[mailer] Wysłano powiadomienie o poprawie danych konta do ${to} (messageId: ${info.messageId}, response: ${info.response})`
-        )
-      } catch (error) {
-        console.error(
-          `[mailer] Nie udało się wysłać powiadomienia o poprawie danych konta do ${to}:`,
-          error
-        )
-      }
-    })
+    adminEmails.map((to) =>
+      sendMail({
+        to,
+        subject: 'Konto użytkownika wymaga ponownej aktywacji',
+        text,
+        html,
+        logLabel: 'powiadomienie o poprawie danych konta',
+      })
+    )
   )
 }
 
 export async function sendProfileCorrectionUserEmail(email: string) {
-  const text = withFooter(
-    'Zapisaliśmy Twoje poprawione dane. Ze względów bezpieczeństwa Twoje konto zostało tymczasowo dezaktywowane i wymaga ponownej aktywacji przez administratora. Poinformujemy Cię osobnym e-mailem, gdy konto zostanie ponownie aktywowane.'
-  )
-  const transporter = getTransporter()
-
-  if (!transporter) {
-    console.warn(`[mailer] SMTP nie jest skonfigurowany. ${text}`)
-
-    return
-  }
-
-  try {
-    const info = await transporter.sendMail({
-      from: SMTP_FROM || SMTP_USER,
-      to: email,
-      subject: 'Twoje konto wymaga ponownej aktywacji',
-      text,
-      html: withFooterHtml(
-        '<p>Zapisaliśmy Twoje poprawione dane. Ze względów bezpieczeństwa Twoje konto zostało tymczasowo dezaktywowane i wymaga ponownej aktywacji przez administratora.</p><p>Poinformujemy Cię osobnym e-mailem, gdy konto zostanie ponownie aktywowane.</p>'
-      ),
-    })
-
-    console.log(
-      `[mailer] Wysłano mail o dezaktywacji po poprawie danych do ${email} (messageId: ${info.messageId}, response: ${info.response})`
-    )
-  } catch (error) {
-    console.error(
-      `[mailer] Nie udało się wysłać maila o dezaktywacji po poprawie danych do ${email}:`,
-      error
-    )
-  }
+  await sendMail({
+    to: email,
+    subject: 'Twoje konto wymaga ponownej aktywacji',
+    text: withFooter(
+      'Zapisaliśmy Twoje poprawione dane. Ze względów bezpieczeństwa Twoje konto zostało tymczasowo dezaktywowane i wymaga ponownej aktywacji przez administratora. Poinformujemy Cię osobnym e-mailem, gdy konto zostanie ponownie aktywowane.'
+    ),
+    html: withFooterHtml(
+      '<p>Zapisaliśmy Twoje poprawione dane. Ze względów bezpieczeństwa Twoje konto zostało tymczasowo dezaktywowane i wymaga ponownej aktywacji przez administratora.</p><p>Poinformujemy Cię osobnym e-mailem, gdy konto zostanie ponownie aktywowane.</p>'
+    ),
+    logLabel: 'mail o dezaktywacji po poprawie danych',
+  })
 }
 
 export async function sendResultsViewLimitReachedUserEmail(email: string) {
-  const text = withFooter(
-    'Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.'
-  )
-  const transporter = getTransporter()
-
-  if (!transporter) {
-    console.warn(`[mailer] SMTP nie jest skonfigurowany. ${text}`)
-
-    return
-  }
-
-  try {
-    const info = await transporter.sendMail({
-      from: SMTP_FROM || SMTP_USER,
-      to: email,
-      subject: 'Twoje konto zostało zablokowane',
-      text,
-      html: withFooterHtml(
-        '<p>Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.</p>'
-      ),
-    })
-
-    console.log(
-      `[mailer] Wysłano mail o zablokowaniu konta (limit wyświetleń) do ${email} (messageId: ${info.messageId}, response: ${info.response})`
-    )
-  } catch (error) {
-    console.error(
-      `[mailer] Nie udało się wysłać maila o zablokowaniu konta (limit wyświetleń) do ${email}:`,
-      error
-    )
-  }
+  await sendMail({
+    to: email,
+    subject: 'Twoje konto zostało zablokowane',
+    text: withFooter(
+      'Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.'
+    ),
+    html: withFooterHtml(
+      '<p>Wykorzystałeś limit prawidłowych wyświetleń swoich wyników. Twoje konto zostało zablokowane.</p>'
+    ),
+    logLabel: 'mail o zablokowaniu konta (limit wyświetleń)',
+  })
 }
