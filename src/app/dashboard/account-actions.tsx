@@ -115,6 +115,15 @@ export function AccountActions({
           </Select>
         )}
 
+        {status === AccountStatus.PENDING_EMAIL && (
+          <Button
+            size="sm"
+            disabled={pending}
+            onClick={() => handleStatus(AccountStatus.ACTIVE)}
+          >
+            Aktywuj
+          </Button>
+        )}
         {status === AccountStatus.PENDING_APPROVAL && (
           <Button
             size="sm"
