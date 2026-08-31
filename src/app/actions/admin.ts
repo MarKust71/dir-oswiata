@@ -87,6 +87,22 @@ export async function setAccountStatusAction(
       nextStatus === AccountStatus.ACTIVE &&
       target.status === AccountStatus.PENDING_EMAIL
 
+    // Pracownik (rola USER) nie może w ten sposób aktywować konta ucznia,
+    // dla którego nie znaleziono jeszcze wyniku - bez wyniku nie ma jak
+    // zweryfikować tożsamości pomijając link aktywacyjny. Może to zrobić
+    // tylko administrator.
+    if (
+      activatingFromPendingEmail &&
+      actor.role === Role.USER &&
+      target.role === Role.STUDENT &&
+      !target.resultId
+    ) {
+      return {
+        error:
+          'Brak wyniku dla tego konta - aktywację z pominięciem linku może wykonać tylko administrator.',
+      }
+    }
+
     await prisma.user.update({
       where: { id: target.id },
       data: {

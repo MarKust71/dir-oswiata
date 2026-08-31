@@ -397,6 +397,10 @@ export function AccountsTable({
                 const canManage =
                   user.id !== actorId &&
                   canManageAccount({ role: actorRole }, user)
+                const disableActivateFromPendingEmail =
+                  actorRole === Role.USER &&
+                  user.role === Role.STUDENT &&
+                  user.result === null
 
                 return (
                   <TableRow key={user.id}>
@@ -432,6 +436,9 @@ export function AccountsTable({
                         status={user.status}
                         canManage={canManage}
                         canDelete={canManage && actorRole === Role.ADMIN}
+                        disableActivateFromPendingEmail={
+                          disableActivateFromPendingEmail
+                        }
                         assignableRoles={assignableRoles}
                         layout="compact"
                       />
@@ -449,6 +456,10 @@ export function AccountsTable({
         {sortedUsers.map((user) => {
           const canManage =
             user.id !== actorId && canManageAccount({ role: actorRole }, user)
+          const disableActivateFromPendingEmail =
+            actorRole === Role.USER &&
+            user.role === Role.STUDENT &&
+            user.result === null
 
           return (
             <Card key={user.id}>
@@ -515,6 +526,9 @@ export function AccountsTable({
                   status={user.status}
                   canManage={canManage}
                   canDelete={canManage && actorRole === Role.ADMIN}
+                  disableActivateFromPendingEmail={
+                    disableActivateFromPendingEmail
+                  }
                   assignableRoles={assignableRoles}
                 />
               </CardContent>
