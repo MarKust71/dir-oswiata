@@ -23,6 +23,34 @@ enum AccountStatus {
   DISABLED
 }
 
+enum EventType {
+  REGISTRATION_SUBMITTED
+  REGISTRATION_BLOCKED_RATE_LIMIT
+  REGISTRATION_BLOCKED_DUPLICATE_RESULT
+  EMAIL_VERIFICATION_SENT
+  EMAIL_VERIFICATION_RESENT
+  EMAIL_VERIFIED
+  ACCOUNT_PENDING_APPROVAL
+  ACCOUNT_ACTIVATED
+  ACCOUNT_ACTIVATED_SKIP_EMAIL_VERIFICATION
+  ACCOUNT_DEACTIVATED
+  ACCOUNT_DELETED
+  ACCOUNT_ROLE_CHANGED
+  ACCOUNT_LOCKED_APPLICATION_NUMBER
+  ACCOUNT_LOCKED_RESULTS_VIEW_LIMIT
+  PROFILE_CORRECTED
+  PROFILE_EDIT_BLOCKED_DUPLICATE_RESULT
+  RESULTS_IMPORTED
+  RESULTS_RELINKED
+  LOGIN_SUCCEEDED
+  LOGIN_FAILED
+  SETTINGS_CHANGED
+  DB_BACKUP_CREATED
+  DB_BACKUP_RESTORED
+  EMAIL_SEND_FAILED
+  EMAIL_SEND_SKIPPED_HOURLY_LIMIT
+}
+
 model User {
   id                        String              @id @default(cuid())
   email                     String              @unique
@@ -114,4 +142,29 @@ model EmailSendLog {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// Trwały log zdarzeń aplikacji - niezależny od dostarczalności e-maili (zob.
+// src/lib/mailer.ts - wysyłka bywa zawodna, np. blokada konta SMTP przez
+// dostawcę) i od logów serwera (ulotnych na Vercel). Celowo bez @relation do
+// User - wpis ma przetrwać usunięcie konta (deleteAccountAction), dlatego
+// e-mail/id aktora i celu są zapisane jako zwykłe, zdenormalizowane pola.
+// IP i user-agent to dane osobowe - widoczne tylko dla ADMIN, wymagają
+// polityki retencji (czyszczenie starszych wpisów).
+model EventLog {
+  id           String    @id @default(cuid())
+  type         EventType
+  message      String
+  actorEmail   String?
+  actorUserId  String?
+  targetEmail  String?
+  targetUserId String?
+  ip           String?
+  userAgent    String?
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+
+  @@index([type, createdAt])
+  @@index([targetUserId])
+  @@index([actorUserId])
 }

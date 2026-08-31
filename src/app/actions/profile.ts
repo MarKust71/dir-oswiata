@@ -16,6 +16,8 @@ import {
   sendProfileCorrectionAdminNotification,
   sendProfileCorrectionUserEmail,
 } from '@/lib/mailer'
+import { getClientRequestInfo } from '@/lib/request-info'
+import { logEvent } from '@/lib/event-log'
 import {
   ProfileCorrectionSchema,
   type ProfileCorrectionFormState,
@@ -24,7 +26,7 @@ import {
   DB_CONNECTION_ERROR_MESSAGE,
   isDatabaseConnectionError,
 } from '@/lib/db-error'
-import { AccountStatus, Role } from '@/generated/prisma/enums'
+import { AccountStatus, EventType, Role } from '@/generated/prisma/enums'
 
 export async function updateProfileAction(
   _state: ProfileCorrectionFormState,
@@ -73,14 +75,26 @@ export async function updateProfileAction(
       user.id
     )
 
+    const { ip, userAgent } = await getClientRequestInfo()
+
     if (linkedAccountEmail) {
-      console.warn(
-        `[profile] Zablokowano konto (${user.email}) - poprawione dane pasują do wyniku już przypisanego do konta ${linkedAccountEmail}.`
-      )
+      const logMessage = `Zablokowano konto (${user.email}) - poprawione dane pasują do wyniku już przypisanego do konta ${linkedAccountEmail}.`
+
+      console.warn(`[profile] ${logMessage}`)
 
       await prisma.user.update({
         where: { id: user.id },
         data: { status: AccountStatus.DISABLED },
+      })
+
+      await logEvent({
+        type: EventType.PROFILE_EDIT_BLOCKED_DUPLICATE_RESULT,
+        message: logMessage,
+        actorEmail: user.email,
+        actorUserId: user.id,
+        targetEmail: linkedAccountEmail,
+        ip,
+        userAgent,
       })
 
       await sendDuplicateResultProfileEditAttemptUserEmail(linkedAccountEmail)
@@ -124,6 +138,17 @@ export async function updateProfileAction(
         sendProfileCorrectionAdminNotification(adminEmails, user.email),
         sendProfileCorrectionUserEmail(user.email),
       ])
+
+      await logEvent({
+        type: EventType.PROFILE_CORRECTED,
+        message: `Konto ${user.email} poprawiło dane w panelu i wraca do stanu oczekującego na akceptację.`,
+        actorEmail: user.email,
+        actorUserId: user.id,
+        targetEmail: user.email,
+        targetUserId: user.id,
+        ip,
+        userAgent,
+      })
     }
   } catch (error) {
     if (isDatabaseConnectionError(error)) {

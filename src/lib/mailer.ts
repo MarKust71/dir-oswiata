@@ -5,6 +5,8 @@ import packageJson from '../../package.json'
 import { prisma } from '@/lib/prisma'
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from '@/lib/contact'
 import { formatWarsawTimestamp } from '@/lib/warsaw-time'
+import { logEvent } from '@/lib/event-log'
+import { EventType } from '@/generated/prisma/enums'
 
 const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM, APP_URL } =
   process.env
@@ -94,9 +96,14 @@ async function sendMail({
   }
 
   if (!(await canSendMoreThisHour())) {
-    console.error(
-      `[mailer] Pominięto wysyłkę (${logLabel}) do ${to} - osiągnięto godzinowy limit ${HOURLY_SEND_LIMIT} maili (limit dostawcy: 200/h).`
-    )
+    const message = `Pominięto wysyłkę (${logLabel}) do ${to} - osiągnięto godzinowy limit ${HOURLY_SEND_LIMIT} maili (limit dostawcy: 200/h).`
+    console.error(`[mailer] ${message}`)
+
+    await logEvent({
+      type: EventType.EMAIL_SEND_SKIPPED_HOURLY_LIMIT,
+      message,
+      targetEmail: to,
+    })
 
     return
   }
@@ -121,6 +128,12 @@ async function sendMail({
       `[mailer] Nie udało się wysłać (${logLabel}) do ${to}:`,
       error
     )
+
+    await logEvent({
+      type: EventType.EMAIL_SEND_FAILED,
+      message: `Nie udało się wysłać (${logLabel}) do ${to}: ${error instanceof Error ? error.message : String(error)}`,
+      targetEmail: to,
+    })
   } finally {
     await prisma.emailSendLog.create({ data: {} })
   }
