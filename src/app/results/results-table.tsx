@@ -76,7 +76,19 @@ export function ResultsTable({ results }: { results: ResultRow[] }) {
       : results
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="font-heading text-2xl font-semibold">
+          Wyniki egzaminów{' '}
+          <span className="font-normal text-xl">
+            ({filteredResults.length})
+          </span>
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Przegląd danych zaimportowanych z pliku wyników.
+        </p>
+      </div>
+
       <Input
         type="search"
         placeholder="Szukaj po nazwisku i imieniu lub wklej maskę PESEL…"
