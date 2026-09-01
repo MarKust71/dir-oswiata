@@ -24,18 +24,5 @@ export default async function ResultsPage() {
     },
   })
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold">
-          Wyniki egzaminów
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Przegląd danych zaimportowanych z pliku wyników.
-        </p>
-      </div>
-
-      <ResultsTable results={results} />
-    </div>
-  )
+  return <ResultsTable results={results} />
 }
