@@ -1,7 +1,7 @@
 import { Prisma } from '@/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
-import { Role } from '@/generated/prisma/enums'
+import { AccountStatus, EventType, Role } from '@/generated/prisma/enums'
 
 import { AccountsTable } from './accounts-table'
 import { RoleFilter } from './role-filter'
@@ -78,9 +78,47 @@ export default async function DashboardPage(props: PageProps<'/dashboard'>) {
   const assignableRoles: Role[] =
     actor.role === Role.ADMIN ? [Role.STUDENT, Role.USER, Role.ADMIN] : []
 
+  // Konto zablokowane po 3 błędnych numerach wniosku wymaga ostrzeżenia przy
+  // ponownej aktywacji (patrz resultsViewCount niżej) - ustalamy to z dziennika
+  // zdarzeń, biorąc najnowszy z wpisów decydujących o obecnym statusie konta:
+  // jeśli to on jest przyczyną blokady, aktywacja przyzna nowy komplet prób.
+  const disabledUserIds = users
+    .filter((user) => user.status === AccountStatus.DISABLED)
+    .map((user) => user.id)
+
+  const lockReasonByUserId = new Map<string, EventType>()
+  if (disabledUserIds.length > 0) {
+    const lockEvents = await prisma.eventLog.findMany({
+      where: {
+        targetUserId: { in: disabledUserIds },
+        type: {
+          in: [
+            EventType.ACCOUNT_LOCKED_APPLICATION_NUMBER,
+            EventType.ACCOUNT_LOCKED_RESULTS_VIEW_LIMIT,
+            EventType.ACCOUNT_DEACTIVATED,
+          ],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { targetUserId: true, type: true },
+    })
+    for (const event of lockEvents) {
+      if (event.targetUserId && !lockReasonByUserId.has(event.targetUserId)) {
+        lockReasonByUserId.set(event.targetUserId, event.type)
+      }
+    }
+  }
+
+  const usersWithLockInfo = users.map((user) => ({
+    ...user,
+    lockedByApplicationNumber:
+      lockReasonByUserId.get(user.id) ===
+      EventType.ACCOUNT_LOCKED_APPLICATION_NUMBER,
+  }))
+
   return (
     <AccountsTable
-      users={users}
+      users={usersWithLockInfo}
       actorId={actor.id}
       actorRole={actor.role}
       assignableRoles={assignableRoles}

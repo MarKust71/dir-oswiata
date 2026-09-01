@@ -45,6 +45,10 @@ type AccountActionsProps = {
   // ponowna aktywacja daje mu świeży komplet prób - wymaga dodatkowego
   // potwierdzenia.
   resultsViewCount?: number
+  // Konto zablokowane po 3 błędnych numerach wniosku (ustalone z dziennika
+  // zdarzeń w page.tsx) - ponowna aktywacja przyznaje nowy komplet prób,
+  // więc również wymaga dodatkowego potwierdzenia.
+  lockedByApplicationNumber?: boolean
   assignableRoles: Role[]
   // "compact" ustawia kontrolki jedna pod druga, żeby nie poszerzać kolumny
   // w tabeli desktopowej; "wide" (domyślnie) układa je obok siebie - używane
@@ -61,12 +65,15 @@ export function AccountActions({
   canDelete,
   disableActivateFromPendingEmail = false,
   resultsViewCount = 0,
+  lockedByApplicationNumber = false,
   assignableRoles,
   layout = 'wide',
 }: AccountActionsProps) {
   const [pending, startTransition] = useTransition()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [activateConfirmOpen, setActivateConfirmOpen] = useState(false)
+  const [applicationNumberConfirmOpen, setApplicationNumberConfirmOpen] =
+    useState(false)
 
   function handleStatus(
     next: typeof AccountStatus.ACTIVE | typeof AccountStatus.DISABLED
@@ -81,6 +88,8 @@ export function AccountActions({
   function handleActivateClick() {
     if (resultsViewCount > 0) {
       setActivateConfirmOpen(true)
+    } else if (lockedByApplicationNumber) {
+      setApplicationNumberConfirmOpen(true)
     } else {
       handleStatus(AccountStatus.ACTIVE)
     }
@@ -88,6 +97,11 @@ export function AccountActions({
 
   function handleActivateConfirm() {
     setActivateConfirmOpen(false)
+    handleStatus(AccountStatus.ACTIVE)
+  }
+
+  function handleActivateApplicationNumberConfirm() {
+    setApplicationNumberConfirmOpen(false)
     handleStatus(AccountStatus.ACTIVE)
   }
 
@@ -221,6 +235,28 @@ export function AccountActions({
           <AlertDialogFooter>
             <AlertDialogCancel>Anuluj</AlertDialogCancel>
             <AlertDialogAction onClick={handleActivateConfirm}>
+              Aktywuj
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={applicationNumberConfirmOpen}
+        onOpenChange={setApplicationNumberConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ponowna aktywacja konta</AlertDialogTitle>
+            <AlertDialogDescription>
+              Konto zostało zablokowane po trzykrotnym błędnym podaniu numeru
+              wniosku. Aktywacja przyzna nowy komplet prób. Czy na pewno
+              aktywować to konto ponownie?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction onClick={handleActivateApplicationNumberConfirm}>
               Aktywuj
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -264,6 +264,7 @@ export type AccountRow = {
   peselPositions: number[]
   peselDigits: string[]
   resultsViewCount: number
+  lockedByApplicationNumber: boolean
   result: ResultSummary | null
 }
 
@@ -498,6 +499,9 @@ export function AccountsTable({
                           disableActivateFromPendingEmail
                         }
                         resultsViewCount={user.resultsViewCount}
+                        lockedByApplicationNumber={
+                          user.lockedByApplicationNumber
+                        }
                         assignableRoles={assignableRoles}
                         layout="compact"
                       />
@@ -589,6 +593,7 @@ export function AccountsTable({
                     disableActivateFromPendingEmail
                   }
                   resultsViewCount={user.resultsViewCount}
+                  lockedByApplicationNumber={user.lockedByApplicationNumber}
                   assignableRoles={assignableRoles}
                 />
               </CardContent>
