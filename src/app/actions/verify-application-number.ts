@@ -107,6 +107,29 @@ export async function verifyApplicationNumberAction(
         },
       })
 
+      const { ip: verifiedIp, userAgent: verifiedUserAgent } =
+        await getClientRequestInfo()
+      await logEvent({
+        type: EventType.APPLICATION_NUMBER_VERIFIED,
+        message: `Podano poprawny numer wniosku: ${user.email}.`,
+        actorEmail: user.email,
+        actorUserId: user.id,
+        targetEmail: user.email,
+        targetUserId: user.id,
+        ip: verifiedIp,
+        userAgent: verifiedUserAgent,
+      })
+      await logEvent({
+        type: EventType.RESULTS_VIEWED,
+        message: `Wyświetlono wyniki egzaminu: ${user.email}.`,
+        actorEmail: user.email,
+        actorUserId: user.id,
+        targetEmail: user.email,
+        targetUserId: user.id,
+        ip: verifiedIp,
+        userAgent: verifiedUserAgent,
+      })
+
       if (reachedViewLimit) {
         const notificationEmails = await getNotificationEmails()
         await sendResultsViewLimitReachedAdminNotification(
@@ -115,7 +138,6 @@ export async function verifyApplicationNumberAction(
         )
         await sendResultsViewLimitReachedUserEmail(user.email)
 
-        const { ip, userAgent } = await getClientRequestInfo()
         await logEvent({
           type: EventType.ACCOUNT_LOCKED_RESULTS_VIEW_LIMIT,
           message: `Konto ${user.email} zablokowane - wykorzystano limit ${maxViews} wyświetleń wyniku.`,
@@ -123,8 +145,8 @@ export async function verifyApplicationNumberAction(
           actorUserId: user.id,
           targetEmail: user.email,
           targetUserId: user.id,
-          ip,
-          userAgent,
+          ip: verifiedIp,
+          userAgent: verifiedUserAgent,
         })
       }
 
@@ -136,6 +158,19 @@ export async function verifyApplicationNumberAction(
     }
 
     const nextAttempts = user.applicationNumberAttempts + 1
+
+    const { ip: rejectedIp, userAgent: rejectedUserAgent } =
+      await getClientRequestInfo()
+    await logEvent({
+      type: EventType.APPLICATION_NUMBER_REJECTED,
+      message: `Podano niepoprawny numer wniosku: ${user.email}.`,
+      actorEmail: user.email,
+      actorUserId: user.id,
+      targetEmail: user.email,
+      targetUserId: user.id,
+      ip: rejectedIp,
+      userAgent: rejectedUserAgent,
+    })
 
     if (nextAttempts >= maxAttempts) {
       await prisma.user.update({
@@ -150,7 +185,6 @@ export async function verifyApplicationNumberAction(
       await sendAccountLockedAdminNotification(notificationEmails, user.email)
       await sendAccountLockedUserEmail(user.email)
 
-      const { ip, userAgent } = await getClientRequestInfo()
       await logEvent({
         type: EventType.ACCOUNT_LOCKED_APPLICATION_NUMBER,
         message: `Konto ${user.email} zablokowane - ${maxAttempts} błędnych prób podania numeru wniosku.`,
@@ -158,8 +192,8 @@ export async function verifyApplicationNumberAction(
         actorUserId: user.id,
         targetEmail: user.email,
         targetUserId: user.id,
-        ip,
-        userAgent,
+        ip: rejectedIp,
+        userAgent: rejectedUserAgent,
       })
 
       return {

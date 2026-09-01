@@ -33,11 +33,14 @@ export const eventTypeLabels: Record<EventType, string> = {
     'Konto zablokowane (numer wniosku)',
   [EventType.ACCOUNT_LOCKED_RESULTS_VIEW_LIMIT]:
     'Konto zablokowane (limit wyświetleń)',
+  [EventType.APPLICATION_NUMBER_VERIFIED]: 'Numer wniosku poprawny',
+  [EventType.APPLICATION_NUMBER_REJECTED]: 'Numer wniosku niepoprawny',
   [EventType.PROFILE_CORRECTED]: 'Poprawiono dane profilu',
   [EventType.PROFILE_EDIT_BLOCKED_DUPLICATE_RESULT]:
     'Edycja zablokowana (cudzy wynik)',
   [EventType.RESULTS_IMPORTED]: 'Import wyników',
   [EventType.RESULTS_RELINKED]: 'Ponowne dopasowanie wyników',
+  [EventType.RESULTS_VIEWED]: 'Wyświetlono wyniki egzaminu',
   [EventType.LOGIN_SUCCEEDED]: 'Logowanie udane',
   [EventType.LOGIN_FAILED]: 'Logowanie nieudane',
   [EventType.SETTINGS_CHANGED]: 'Zmiana ustawień',
