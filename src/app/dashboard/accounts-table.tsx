@@ -303,6 +303,7 @@ export function AccountsTable({
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const [hideViewed, setHideViewed] = useState(false)
 
   // Odświeżanie w tle co 60 s (z uwzględnieniem obecnych filtrów w URL) -
   // router.refresh() tylko ponownie pobiera dane z serwera, nie generuje
@@ -331,9 +332,14 @@ export function AccountsTable({
   }
 
   const normalizedQuery = query.replace(/\s+/g, '').toLowerCase()
-  const filteredUsers = normalizedQuery
+  const searchedUsers = normalizedQuery
     ? users.filter((user) => searchIndex(user).includes(normalizedQuery))
     : users
+  const filteredUsers = hideViewed
+    ? searchedUsers.filter(
+        (user) => !(user.role === Role.STUDENT && user.resultsViewCount > 0)
+      )
+    : searchedUsers
 
   // Sortowanie po stronie klienta - dotyczy tylko widoku, kolejność z serwera
   // (po e-mailu) wraca po trzecim kliknięciu tego samego nagłówka.
@@ -371,18 +377,34 @@ export function AccountsTable({
           className="max-w-sm"
         />
 
-        <div className="flex items-center gap-2">
-          <Switch
-            id="auto-refresh"
-            checked={autoRefresh}
-            onCheckedChange={setAutoRefresh}
-          />
-          <Label
-            htmlFor="auto-refresh"
-            className="text-sm text-muted-foreground"
-          >
-            Odśwież automatycznie
-          </Label>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="hide-viewed"
+              checked={hideViewed}
+              onCheckedChange={setHideViewed}
+            />
+            <Label
+              htmlFor="hide-viewed"
+              className="text-sm text-muted-foreground"
+            >
+              Ukryj w.w.
+            </Label>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Switch
+              id="auto-refresh"
+              checked={autoRefresh}
+              onCheckedChange={setAutoRefresh}
+            />
+            <Label
+              htmlFor="auto-refresh"
+              className="text-sm text-muted-foreground"
+            >
+              Odśwież automatycznie
+            </Label>
+          </div>
         </div>
       </div>
 
