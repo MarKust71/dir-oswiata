@@ -94,7 +94,7 @@ export default async function StatisticsPage() {
         <StatCard
           title="Niepołączone z wynikiem"
           value={unlinkedAccounts}
-          description={`Błędne dane, konta dotyczące tej samej osoby itp., ${formatPercent(linkedAccounts, totalAccounts)} założonych kont, ${formatPercent(linkedAccounts, totalResults)} wszystkich wyników`}
+          description={`Błędne dane, konta dotyczące tej samej osoby itp., ${formatPercent(unlinkedAccounts, totalAccounts)} założonych kont, ${formatPercent(unlinkedAccounts, totalResults)} wszystkich wyników`}
         />
 
         <StatCard
