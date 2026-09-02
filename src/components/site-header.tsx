@@ -52,6 +52,14 @@ export async function SiteHeader() {
                 Wyniki
               </Link>
             )}
+            {(user.role === Role.ADMIN || user.role === Role.USER) && (
+              <Link
+                href="/statistics"
+                className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+              >
+                Statystyki
+              </Link>
+            )}
             {user.role === Role.ADMIN && (
               <Link
                 href="/settings"
