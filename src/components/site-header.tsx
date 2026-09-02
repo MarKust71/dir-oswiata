@@ -4,8 +4,7 @@ import packageJson from '../../package.json'
 import { getCurrentUser } from '@/lib/dal'
 import { getMaintenanceMode } from '@/lib/settings'
 import { logoutAction } from '@/app/actions/auth'
-import { Button, buttonVariants } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { buttonVariants } from '@/components/ui/button'
 import { roleLabels } from '@/lib/labels'
 import { homePathForRole } from '@/lib/dal'
 import {
@@ -15,14 +14,31 @@ import {
 } from '@/lib/contact'
 import { Role } from '@/generated/prisma/enums'
 
+import { SiteHeaderNav } from './site-header-nav'
+
 export async function SiteHeader() {
   const user = await getCurrentUser()
   const maintenanceMode = user ? false : await getMaintenanceMode()
 
+  const links = user
+    ? [
+        ...(user.role === Role.ADMIN || user.role === Role.USER
+          ? [
+              { href: '/dashboard', label: 'Użytkownicy' },
+              { href: '/results', label: 'Wyniki' },
+              { href: '/statistics', label: 'Statystyki' },
+            ]
+          : []),
+        ...(user.role === Role.ADMIN
+          ? [{ href: '/settings', label: 'Ustawienia' }]
+          : []),
+      ]
+    : []
+
   return (
     <header className="border-b bg-background">
-      <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-4 px-4">
-        <div className="flex items-baseline gap-2">
+      <div className="mx-auto flex w-full max-w-5xl items-start justify-between gap-4 px-4 py-2 sm:h-14 sm:items-center sm:py-0">
+        <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
           <Link
             href={user ? homePathForRole(user.role) : '/'}
             className="font-heading text-base font-semibold"
@@ -35,51 +51,12 @@ export async function SiteHeader() {
         </div>
 
         {user ? (
-          <div className="flex items-center gap-3">
-            {(user.role === Role.ADMIN || user.role === Role.USER) && (
-              <Link
-                href="/dashboard"
-                className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-              >
-                Użytkownicy
-              </Link>
-            )}
-            {(user.role === Role.ADMIN || user.role === Role.USER) && (
-              <Link
-                href="/results"
-                className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-              >
-                Wyniki
-              </Link>
-            )}
-            {(user.role === Role.ADMIN || user.role === Role.USER) && (
-              <Link
-                href="/statistics"
-                className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-              >
-                Statystyki
-              </Link>
-            )}
-            {user.role === Role.ADMIN && (
-              <Link
-                href="/settings"
-                className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-              >
-                Ustawienia
-              </Link>
-            )}
-            <Badge variant="secondary" className="hidden sm:inline-flex">
-              {roleLabels[user.role]}
-            </Badge>
-            <span className="hidden max-w-40 truncate text-sm text-muted-foreground sm:inline">
-              {user.email}
-            </span>
-            <form action={logoutAction}>
-              <Button type="submit" variant="outline" size="sm">
-                Wyloguj
-              </Button>
-            </form>
-          </div>
+          <SiteHeaderNav
+            links={links}
+            roleLabel={roleLabels[user.role]}
+            email={user.email}
+            logoutAction={logoutAction}
+          />
         ) : (
           <nav className="flex items-center gap-2">
             <Link
