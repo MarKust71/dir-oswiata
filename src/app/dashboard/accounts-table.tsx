@@ -7,6 +7,8 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  ChevronDown,
+  ChevronUp,
   CircleCheck,
   CircleX,
   Info,
@@ -18,6 +20,7 @@ import { roleLabels, statusLabels } from '@/lib/labels'
 import { maskPesel } from '@/lib/pesel'
 import { cn } from '@/lib/utils'
 import { AccountStatus, Role } from '@/generated/prisma/enums'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -305,6 +308,7 @@ export function AccountsTable({
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [hideViewed, setHideViewed] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   // Odświeżanie w tle co 60 s (z uwzględnieniem obecnych filtrów w URL) -
   // router.refresh() tylko ponownie pobiera dane z serwera, nie generuje
@@ -365,8 +369,28 @@ export function AccountsTable({
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        {filters}
+      <div className="flex flex-col gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="self-start"
+          aria-expanded={filtersOpen}
+          onClick={() => setFiltersOpen((value) => !value)}
+        >
+          Filtry
+          {filtersOpen ? (
+            <ChevronUp className="size-4" />
+          ) : (
+            <ChevronDown className="size-4" />
+          )}
+        </Button>
+
+        {filtersOpen && (
+          <div className="flex flex-col gap-3 rounded-lg border p-4">
+            {filters}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
