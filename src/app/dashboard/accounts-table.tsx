@@ -374,7 +374,7 @@ export function AccountsTable({
           type="button"
           variant="outline"
           size="sm"
-          className="self-start"
+          className="self-start md:hidden"
           aria-expanded={filtersOpen}
           onClick={() => setFiltersOpen((value) => !value)}
         >
@@ -386,11 +386,14 @@ export function AccountsTable({
           )}
         </Button>
 
-        {filtersOpen && (
-          <div className="flex flex-col gap-3 rounded-lg border p-4">
-            {filters}
-          </div>
-        )}
+        <div
+          className={cn(
+            'flex-col gap-3 rounded-lg border p-4 md:flex md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-4 md:rounded-none md:border-0 md:p-0',
+            filtersOpen ? 'flex' : 'hidden'
+          )}
+        >
+          {filters}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
