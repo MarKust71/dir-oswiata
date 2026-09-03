@@ -288,7 +288,7 @@ export async function updateEventLogRetentionAction(
       { setting: 'event_log_retention_days', retentionDays }
     )
     revalidatePath('/settings')
-    revalidatePath('/settings/events')
+    revalidatePath('/logs')
 
     return { message: 'Zapisano okres przechowywania dziennika zdarzeń.' }
   } catch (error) {
