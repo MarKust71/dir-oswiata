@@ -19,12 +19,13 @@ function isEventType(value: string): value is EventType {
 export default async function EventsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; page?: string }>
+  searchParams: Promise<{ type?: string; page?: string; q?: string }>
 }) {
   const user = await requireRole([Role.ADMIN, Role.USER])
 
   const params = await searchParams
   const type = params.type && isEventType(params.type) ? params.type : undefined
+  const q = params.q?.trim() || undefined
   const page = Math.max(1, Number(params.page) || 1)
 
   // Czyszczenie starych wpisów uruchamiane przy wizycie na tej stronie, a nie
@@ -34,7 +35,14 @@ export default async function EventsPage({
   const retentionDays = await getEventLogRetentionDays()
   await cleanupExpiredEvents(retentionDays)
 
-  const where = type ? { type } : {}
+  // Filtr typu i wyszukiwanie w treści wiadomości nakładane są na poziomie
+  // zapytania do bazy - przed stronicowaniem (skip/take) - żeby "Strona X z Y"
+  // i wyniki na danej stronie dotyczyły przefiltrowanego zbioru, a nie tylko
+  // 50 najnowszych wpisów.
+  const where = {
+    ...(type ? { type } : {}),
+    ...(q ? { message: { contains: q, mode: 'insensitive' as const } } : {}),
+  }
 
   const [events, totalCount] = await Promise.all([
     prisma.eventLog.findMany({
@@ -50,6 +58,7 @@ export default async function EventsPage({
   const pageParam = (targetPage: number) => {
     const p = new URLSearchParams()
     if (type) p.set('type', type)
+    if (q) p.set('q', q)
     p.set('page', String(targetPage))
 
     return `?${p.toString()}`
@@ -89,6 +98,7 @@ export default async function EventsPage({
         prevHref={pageParam(page - 1)}
         nextHref={pageParam(page + 1)}
         viewerRole={user.role}
+        initialQuery={q ?? ''}
       />
     </div>
   )
