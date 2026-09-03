@@ -48,16 +48,20 @@ export function EventsTable({
   events,
   page,
   totalPages,
+  firstHref,
   prevHref,
   nextHref,
+  lastHref,
   viewerRole,
   initialQuery,
 }: {
   events: EventRow[]
   page: number
   totalPages: number
+  firstHref: string
   prevHref: string
   nextHref: string
+  lastHref: string
   viewerRole: Role
   initialQuery: string
 }) {
@@ -213,6 +217,16 @@ export function EventsTable({
         {totalPages > 1 && (
           <div className="mt-4 flex items-center justify-center gap-4 text-sm">
             <Link
+              href={firstHref}
+              aria-disabled={page <= 1}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'sm' }),
+                page <= 1 && 'pointer-events-none opacity-50'
+              )}
+            >
+              Pierwsza
+            </Link>
+            <Link
               href={prevHref}
               aria-disabled={page <= 1}
               className={cn(
@@ -234,6 +248,16 @@ export function EventsTable({
               )}
             >
               Następna
+            </Link>
+            <Link
+              href={lastHref}
+              aria-disabled={page >= totalPages}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'sm' }),
+                page >= totalPages && 'pointer-events-none opacity-50'
+              )}
+            >
+              Ostatnia
             </Link>
           </div>
         )}

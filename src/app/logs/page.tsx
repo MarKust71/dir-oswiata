@@ -2,15 +2,13 @@ import Link from 'next/link'
 
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/dal'
-import { getEventLogRetentionDays } from '@/lib/settings'
+import { getEventLogPageSize, getEventLogRetentionDays } from '@/lib/settings'
 import { cleanupExpiredEvents } from '@/lib/event-log'
 import { Role, EventType } from '@/generated/prisma/enums'
 import { buttonVariants } from '@/components/ui/button'
 
 import { EventTypeFilter } from './event-type-filter'
 import { EventsTable } from './events-table'
-
-const PAGE_SIZE = 50
 
 function isEventType(value: string): value is EventType {
   return (Object.values(EventType) as string[]).includes(value)
@@ -35,6 +33,8 @@ export default async function EventsPage({
   const retentionDays = await getEventLogRetentionDays()
   await cleanupExpiredEvents(retentionDays)
 
+  const pageSize = await getEventLogPageSize()
+
   // Filtr typu i wyszukiwanie w treści wiadomości nakładane są na poziomie
   // zapytania do bazy - przed stronicowaniem (skip/take) - żeby "Strona X z Y"
   // i wyniki na danej stronie dotyczyły przefiltrowanego zbioru, a nie tylko
@@ -48,13 +48,13 @@ export default async function EventsPage({
     prisma.eventLog.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }),
     prisma.eventLog.count({ where }),
   ])
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
   const pageParam = (targetPage: number) => {
     const p = new URLSearchParams()
     if (type) p.set('type', type)
@@ -95,8 +95,10 @@ export default async function EventsPage({
         events={events}
         page={page}
         totalPages={totalPages}
+        firstHref={pageParam(1)}
         prevHref={pageParam(page - 1)}
         nextHref={pageParam(page + 1)}
+        lastHref={pageParam(totalPages)}
         viewerRole={user.role}
         initialQuery={q ?? ''}
       />
