@@ -9,6 +9,7 @@ import {
   setEventLogRetentionDays,
   setInactivityTimeoutSeconds,
   setInactivityTimeoutStudentsOnly,
+  setMailerSendMonthlySendLimit,
   setMaintenanceMode,
   setNotificationEmails,
   setResultsLimits,
@@ -389,6 +390,39 @@ export async function updateAwsSendLimitsAction(
     revalidatePath('/settings')
 
     return { message: 'Zapisano limity wysyłki AWS SES.' }
+  } catch (error) {
+    if (
+      isDatabaseConnectionError(error) ||
+      (error instanceof Error && error.message === DB_CONNECTION_ERROR_MESSAGE)
+    ) {
+      return { error: DB_CONNECTION_ERROR_MESSAGE }
+    }
+    throw error
+  }
+}
+
+export async function updateMailerSendLimitsAction(
+  _state: SettingsActionState,
+  formData: FormData
+): Promise<SettingsActionState> {
+  try {
+    const actor = await requireRole([Role.ADMIN])
+
+    const monthlySendLimit = parsePositiveInt(formData.get('monthlySendLimit'))
+
+    if (monthlySendLimit === null) {
+      return { error: 'Podaj dodatnią liczbę całkowitą.' }
+    }
+
+    await setMailerSendMonthlySendLimit(monthlySendLimit)
+    await logSettingsChange(
+      actor,
+      `Zmieniono miesięczny limit wysyłki MailerSend (${actor.email}).`,
+      { setting: 'mailersend_monthly_send_limit', monthlySendLimit }
+    )
+    revalidatePath('/settings')
+
+    return { message: 'Zapisano miesięczny limit wysyłki MailerSend.' }
   } catch (error) {
     if (
       isDatabaseConnectionError(error) ||

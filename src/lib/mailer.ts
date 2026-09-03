@@ -9,6 +9,7 @@ import { logEvent } from '@/lib/event-log'
 import {
   getAwsDailySendLimit,
   getAwsMaxSendRatePerSecond,
+  getMailerSendMonthlySendLimit,
 } from '@/lib/settings'
 import { EventType } from '@/generated/prisma/enums'
 
@@ -52,7 +53,10 @@ function getTransporter() {
 // tempo wysyłania. Wartości konfigurowalne w Ustawieniach (zob.
 // src/lib/settings.ts) - domyślnie odpowiadają trybowi sandbox SES (200/24h,
 // 1 mail/s), z zapasem poniżej twardego limitu, bo skrzynki może używać też
-// coś poza tą aplikacją.
+// coś poza tą aplikacją. Aktualny dostawca (MailerSend) narzuca za to
+// osobny, miesięczny limit liczby maili (plan Free/Hobby) - oba zestawy
+// limitów są pilnowane naraz, żeby przełączenie dostawcy SMTP w .env nie
+// wymagało zmian w tej logice.
 const DAILY_SEND_WINDOW_MS = 24 * 60 * 60 * 1000
 
 function sleep(ms: number) {
@@ -63,42 +67,64 @@ function sleep(ms: number) {
 // tylko do serializacji rezerwacji miejsca w limicie wysyłki.
 const SEND_LIMIT_LOCK_KEY = 727001
 
-// Sprawdzenie limitu, odczekanie na tempo wysyłki i zapis licznika muszą być
+type ReserveSendSlotResult =
+  { ok: true } | { ok: false; limitDescription: string }
+
+// Sprawdzenie limitów, odczekanie na tempo wysyłki i zapis licznika muszą być
 // jedną, niepodzielną operacją - w przeciwnym razie równoległe wywołania
 // sendMail() (np. powiadomienie do kilku adresów administracyjnych naraz
 // przez Promise.all, albo kilka równoczesnych żądań na różnych instancjach
 // serverless) mogłyby odczytać ten sam licznik, zanim którekolwiek zdąży go
-// zwiększyć (przekroczenie dziennej kwoty), albo wysłać maile bliżej siebie
-// w czasie niż pozwala maksymalne tempo SES (odrzucenie/throttling).
+// zwiększyć (przekroczenie limitu), albo wysłać maile bliżej siebie w czasie
+// niż pozwala maksymalne tempo SES (odrzucenie/throttling).
 // pg_advisory_xact_lock serializuje te rezerwacje na czas transakcji
 // (włącznie z ewentualnym odczekaniem) i zwalnia się sam przy jej
 // zakończeniu (commit lub rollback).
-async function tryReserveSendSlot(): Promise<{
-  ok: boolean
-  dailyLimit: number
-}> {
-  const [dailyLimit, maxRatePerSecond] = await Promise.all([
+async function tryReserveSendSlot(): Promise<ReserveSendSlotResult> {
+  const [dailyLimit, maxRatePerSecond, monthlyLimit] = await Promise.all([
     getAwsDailySendLimit(),
     getAwsMaxSendRatePerSecond(),
+    getMailerSendMonthlySendLimit(),
   ])
   const minIntervalMs = Math.ceil(1000 / maxRatePerSecond)
 
-  const ok = await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SEND_LIMIT_LOCK_KEY})`
 
-    const windowStart = new Date(Date.now() - DAILY_SEND_WINDOW_MS)
+    const now = new Date()
+    const dayWindowStart = new Date(now.getTime() - DAILY_SEND_WINDOW_MS)
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    // Sprzątanie starych wpisów przy okazji sprawdzania limitów - bez
+    // osobnego zadania czyszczącego. Zachowujemy wpisy potrzebne do obu
+    // okien (24h dla limitu AWS i bieżący miesiąc kalendarzowy dla limitu
+    // MailerSend), więc usuwamy tylko te sprzed wcześniejszej z tych dwóch
+    // granic.
+    const cleanupCutoff =
+      dayWindowStart < monthStart ? dayWindowStart : monthStart
 
-    // Sprzątanie starych wpisów przy okazji sprawdzania limitu - bez osobnego
-    // zadania czyszczącego, bo tabela i tak przechowuje tylko dane z
-    // ostatniej doby.
     await tx.emailSendLog.deleteMany({
-      where: { createdAt: { lt: windowStart } },
-    })
-    const sentInWindow = await tx.emailSendLog.count({
-      where: { createdAt: { gte: windowStart } },
+      where: { createdAt: { lt: cleanupCutoff } },
     })
 
-    if (sentInWindow >= dailyLimit) return false
+    const sentInDay = await tx.emailSendLog.count({
+      where: { createdAt: { gte: dayWindowStart } },
+    })
+    if (sentInDay >= dailyLimit) {
+      return {
+        ok: false,
+        limitDescription: `dzienny limit AWS SES (${dailyLimit} maili)`,
+      }
+    }
+
+    const sentInMonth = await tx.emailSendLog.count({
+      where: { createdAt: { gte: monthStart } },
+    })
+    if (sentInMonth >= monthlyLimit) {
+      return {
+        ok: false,
+        limitDescription: `miesięczny limit MailerSend (${monthlyLimit} maili)`,
+      }
+    }
 
     const lastSend = await tx.emailSendLog.findFirst({
       orderBy: { createdAt: 'desc' },
@@ -112,10 +138,8 @@ async function tryReserveSendSlot(): Promise<{
 
     await tx.emailSendLog.create({ data: {} })
 
-    return true
+    return { ok: true }
   })
-
-  return { ok, dailyLimit }
 }
 
 // Jedyne miejsce, które faktycznie woła transporter.sendMail() - dzięki temu
@@ -156,10 +180,10 @@ async function sendMail({
     return
   }
 
-  const { ok: canSend, dailyLimit } = await tryReserveSendSlot()
+  const reservation = await tryReserveSendSlot()
 
-  if (!canSend) {
-    const message = `Pominięto wysyłkę (${logLabel}) do ${recipientDescription} - osiągnięto dzienny limit ${dailyLimit} maili.`
+  if (!reservation.ok) {
+    const message = `Pominięto wysyłkę (${logLabel}) do ${recipientDescription} - osiągnięto ${reservation.limitDescription}.`
     console.error(`[mailer] ${message}`)
 
     await logEvent({

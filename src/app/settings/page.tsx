@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/dal'
 import {
   getAwsDailySendLimit,
   getAwsMaxSendRatePerSecond,
+  getMailerSendMonthlySendLimit,
   getEventLogPageSize,
   getEventLogRetentionDays,
   getInactivityTimeoutSeconds,
@@ -41,6 +42,7 @@ import { SkipEmailVerificationForm } from './skip-email-verification-form'
 import { EventLogRetentionForm } from './event-log-retention-form'
 import { EventLogPageSizeForm } from './event-log-page-size-form'
 import { AwsSendLimitsForm } from './aws-send-limits-form'
+import { MailerSendLimitsForm } from './mailersend-limits-form'
 
 export default async function SettingsPage() {
   await requireRole([Role.ADMIN])
@@ -59,6 +61,7 @@ export default async function SettingsPage() {
     eventLogPageSize,
     awsDailySendLimit,
     awsMaxSendRatePerSecond,
+    mailerSendMonthlySendLimit,
   ] = await Promise.all([
     getResultsVisibleFrom(),
     getResultsVisibleUntil(),
@@ -72,6 +75,7 @@ export default async function SettingsPage() {
     getEventLogPageSize(),
     getAwsDailySendLimit(),
     getAwsMaxSendRatePerSecond(),
+    getMailerSendMonthlySendLimit(),
   ])
 
   return (
@@ -299,6 +303,27 @@ export default async function SettingsPage() {
             <AwsSendLimitsForm
               initialDailySendLimit={String(awsDailySendLimit)}
               initialMaxSendRatePerSecond={String(awsMaxSendRatePerSecond)}
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Limity wysyłki MailerSend
+            </CardTitle>
+            <CardDescription>
+              MailerSend nie narzuca osobnego limitu tempa wysyłki - tylko
+              miesięczną kwotę maili. Plan Free: 500 maili/mies. w ramach
+              14-dniowego okresu próbnego (nie wiadomo, czy ten limit obowiązuje
+              dalej bez opłat po jego zakończeniu). Plan Hobby: 5000 maili/mies.
+              w stałej opłacie, powyżej doliczane 1,5 USD za każde kolejne 1000
+              maili.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col">
+            <MailerSendLimitsForm
+              initialMonthlySendLimit={String(mailerSendMonthlySendLimit)}
             />
           </CardContent>
         </Card>

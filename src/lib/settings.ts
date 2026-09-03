@@ -278,6 +278,34 @@ export async function setAwsSendLimits(
   ])
 }
 
+// Miesięczny limit wysyłki MailerSend - jedyny limit, jaki narzuca ten
+// dostawca (bez osobnego ograniczenia tempa/s jak w AWS SES) - zob.
+// src/lib/mailer.ts. Plan Free: 500 maili/mies. w ramach 14-dniowego okresu
+// próbnego (nie wiadomo, czy ten limit obowiązuje dalej bez opłat po jego
+// zakończeniu). Plan Hobby: 5000 maili/mies. w stałej opłacie, powyżej
+// doliczane 1,5 USD za każde kolejne 1000 maili.
+export const MAILERSEND_MONTHLY_SEND_LIMIT_KEY = 'mailersend_monthly_send_limit'
+
+const DEFAULT_MAILERSEND_MONTHLY_SEND_LIMIT = 500
+
+export function getMailerSendMonthlySendLimit() {
+  return getSettingPositiveInt(
+    MAILERSEND_MONTHLY_SEND_LIMIT_KEY,
+    DEFAULT_MAILERSEND_MONTHLY_SEND_LIMIT
+  )
+}
+
+export async function setMailerSendMonthlySendLimit(monthlySendLimit: number) {
+  await prisma.settings.upsert({
+    where: { key: MAILERSEND_MONTHLY_SEND_LIMIT_KEY },
+    create: {
+      key: MAILERSEND_MONTHLY_SEND_LIMIT_KEY,
+      value: String(monthlySendLimit),
+    },
+    update: { value: String(monthlySendLimit) },
+  })
+}
+
 export async function getNotificationEmails(): Promise<string[]> {
   const row = await prisma.settings.findUnique({
     where: { key: NOTIFICATION_EMAILS_KEY },
