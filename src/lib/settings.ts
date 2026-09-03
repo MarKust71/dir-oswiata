@@ -101,6 +101,30 @@ export async function setInactivityTimeoutSeconds(seconds: number) {
   })
 }
 
+// Ogranicza automatyczne wylogowanie z braku aktywności tylko do studentów -
+// zob. src/app/layout.tsx.
+export const INACTIVITY_TIMEOUT_STUDENTS_ONLY_KEY =
+  'inactivity_timeout_students_only'
+
+export async function getInactivityTimeoutStudentsOnly(): Promise<boolean> {
+  const row = await prisma.settings.findUnique({
+    where: { key: INACTIVITY_TIMEOUT_STUDENTS_ONLY_KEY },
+  })
+
+  return row?.value === 'true'
+}
+
+export async function setInactivityTimeoutStudentsOnly(enabled: boolean) {
+  await prisma.settings.upsert({
+    where: { key: INACTIVITY_TIMEOUT_STUDENTS_ONLY_KEY },
+    create: {
+      key: INACTIVITY_TIMEOUT_STUDENTS_ONLY_KEY,
+      value: String(enabled),
+    },
+    update: { value: String(enabled) },
+  })
+}
+
 // Liczba dni, po których wpisy w dzienniku zdarzeń (EventLog) są czyszczone -
 // zob. src/app/logs/page.tsx. IP i user-agent to dane osobowe,
 // więc dziennik nie powinien rosnąć bez końca.

@@ -6,6 +6,7 @@ import {
   getAwsMaxSendRatePerSecond,
   getEventLogRetentionDays,
   getInactivityTimeoutSeconds,
+  getInactivityTimeoutStudentsOnly,
   getMaintenanceMode,
   getMaxApplicationNumberAttempts,
   getMaxResultsViewCount,
@@ -32,6 +33,7 @@ import { ResultsWindowForm } from './results-window-form'
 import { ResultsLimitsForm } from './results-limits-form'
 import { RelinkResultsForm } from './relink-results-form'
 import { InactivityTimeoutForm } from './inactivity-timeout-form'
+import { InactivityTimeoutStudentsOnlyForm } from './inactivity-timeout-students-only-form'
 import { BackupForm } from './backup-form'
 import { MaintenanceModeForm } from './maintenance-mode-form'
 import { SkipEmailVerificationForm } from './skip-email-verification-form'
@@ -48,6 +50,7 @@ export default async function SettingsPage() {
     maxApplicationNumberAttempts,
     maxResultsViewCount,
     inactivityTimeoutSeconds,
+    inactivityTimeoutStudentsOnly,
     maintenanceModeEnabled,
     skipEmailVerificationEnabled,
     eventLogRetentionDays,
@@ -59,6 +62,7 @@ export default async function SettingsPage() {
     getMaxApplicationNumberAttempts(),
     getMaxResultsViewCount(),
     getInactivityTimeoutSeconds(),
+    getInactivityTimeoutStudentsOnly(),
     getMaintenanceMode(),
     getSkipEmailVerification(),
     getEventLogRetentionDays(),
@@ -179,12 +183,19 @@ export default async function SettingsPage() {
             </CardTitle>
             <CardDescription>
               Po tym czasie braku aktywności użytkownik zostanie automatycznie
-              wylogowany ze względów bezpieczeństwa.
+              wylogowany ze względów bezpieczeństwa. Opcja &quot;Tylko
+              studenci&quot; ogranicza to działanie wyłącznie do kont ze
+              statusem studenta - Pracownicy i Administratorzy nie będą
+              automatycznie wylogowywani.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col">
+          <CardContent className="flex flex-1 flex-col gap-4">
             <InactivityTimeoutForm
               initialSeconds={String(inactivityTimeoutSeconds)}
+            />
+            <Separator />
+            <InactivityTimeoutStudentsOnlyForm
+              initialEnabled={inactivityTimeoutStudentsOnly}
             />
           </CardContent>
         </Card>
