@@ -7,6 +7,7 @@ import {
   setAwsSendLimits,
   setEventLogRetentionDays,
   setInactivityTimeoutSeconds,
+  setInactivityTimeoutStudentsOnly,
   setMaintenanceMode,
   setNotificationEmails,
   setResultsLimits,
@@ -257,6 +258,32 @@ export async function updateInactivityTimeoutAction(
     revalidatePath('/settings')
 
     return { message: 'Zapisano czas automatycznego wylogowania.' }
+  } catch (error) {
+    if (
+      isDatabaseConnectionError(error) ||
+      (error instanceof Error && error.message === DB_CONNECTION_ERROR_MESSAGE)
+    ) {
+      return { error: DB_CONNECTION_ERROR_MESSAGE }
+    }
+    throw error
+  }
+}
+
+export async function updateInactivityTimeoutStudentsOnlyAction(
+  enabled: boolean
+): Promise<{ error?: string }> {
+  try {
+    const actor = await requireRole([Role.ADMIN])
+
+    await setInactivityTimeoutStudentsOnly(enabled)
+    await logSettingsChange(
+      actor,
+      `Przełącznik "Tylko studenci" dla automatycznego wylogowania ustawiony na ${enabled} przez ${actor.email}.`,
+      { setting: 'inactivity_timeout_students_only', enabled }
+    )
+    revalidatePath('/settings')
+
+    return {}
   } catch (error) {
     if (
       isDatabaseConnectionError(error) ||

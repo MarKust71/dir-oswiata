@@ -3,7 +3,11 @@ import { Geist, Geist_Mono } from 'next/font/google'
 
 import './globals.css'
 import { getCurrentUser } from '@/lib/dal'
-import { getInactivityTimeoutSeconds } from '@/lib/settings'
+import {
+  getInactivityTimeoutSeconds,
+  getInactivityTimeoutStudentsOnly,
+} from '@/lib/settings'
+import { Role } from '@/generated/prisma/enums'
 import { SiteHeader } from '@/components/site-header'
 import { InactivityLogout } from '@/components/inactivity-logout'
 import { Toaster } from '@/components/ui/sonner'
@@ -28,6 +32,13 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
   const inactivityTimeoutSeconds = user
     ? await getInactivityTimeoutSeconds()
     : null
+  const inactivityTimeoutStudentsOnly = user
+    ? await getInactivityTimeoutStudentsOnly()
+    : false
+  const shouldAutoLogout =
+    user &&
+    inactivityTimeoutSeconds &&
+    (!inactivityTimeoutStudentsOnly || user.role === Role.STUDENT)
 
   return (
     <html
@@ -38,7 +49,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
         <SiteHeader />
         <div className="flex flex-1 flex-col">{children}</div>
         <Toaster />
-        {user && inactivityTimeoutSeconds && (
+        {shouldAutoLogout && inactivityTimeoutSeconds && (
           <InactivityLogout timeoutSeconds={inactivityTimeoutSeconds} />
         )}
       </body>
