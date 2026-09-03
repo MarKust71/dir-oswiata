@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import {
   ArrowDown,
@@ -74,6 +75,13 @@ const dateFormatter = new Intl.DateTimeFormat('pl-PL', {
   timeStyle: 'medium',
   timeZone: 'Europe/Warsaw',
 })
+
+// Odpowiednik ręcznego wklejenia adresu e-mail konta w pole wyszukiwania na
+// stronie dziennika zdarzeń (zob. src/app/logs/events-table.tsx) - filtruje
+// dziennik do wpisów wspominających o tym koncie.
+function eventLogHrefForEmail(email: string) {
+  return `/logs?q=${encodeURIComponent(email)}`
+}
 
 // Status "Oczekuje na e-mail" jest klikalny (dla osób z uprawnieniem do
 // zarządzania kontem) - pozwala ponownie wysłać link aktywacyjny bez
@@ -512,7 +520,15 @@ export function AccountsTable({
                       />
                     </TableCell>
                     <TableCell>
-                      {dateFormatter.format(user.createdAt)}
+                      <Link
+                        href={eventLogHrefForEmail(user.email)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                        title="Otwórz dziennik zdarzeń dla tego konta"
+                      >
+                        {dateFormatter.format(user.createdAt)}
+                      </Link>
                     </TableCell>
                     <TableCell>
                       <AccountActions
@@ -559,7 +575,15 @@ export function AccountsTable({
                 </CardTitle>
                 <CardDescription>
                   {roleLabels[user.role]} - zarejestrowano{' '}
-                  {dateFormatter.format(user.createdAt)}
+                  <Link
+                    href={eventLogHrefForEmail(user.email)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline"
+                    title="Otwórz dziennik zdarzeń dla tego konta"
+                  >
+                    {dateFormatter.format(user.createdAt)}
+                  </Link>
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
