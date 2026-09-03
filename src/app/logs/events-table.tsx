@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 import { eventTypeLabels } from '@/lib/labels'
@@ -48,21 +48,52 @@ export function EventsTable({
   events,
   page,
   totalPages,
+  firstHref,
   prevHref,
   nextHref,
+  lastHref,
   viewerRole,
+  initialQuery,
 }: {
   events: EventRow[]
   page: number
   totalPages: number
+  firstHref: string
   prevHref: string
   nextHref: string
+  lastHref: string
   viewerRole: Role
+  initialQuery: string
 }) {
   const showPersonalData = viewerRole === Role.ADMIN
   const router = useRouter()
-  const [query, setQuery] = useState('')
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [query, setQuery] = useState(initialQuery)
   const [autoRefresh, setAutoRefresh] = useState(false)
+
+  // Wyszukiwanie w treści wiadomości jest przekazywane do serwera (parametr
+  // `q` w URL-u) z opóźnieniem, żeby nie stronicować/filtrować tylko już
+  // pobranej strony wyników - filtr ma obejmować cały zbiór, przed
+  // stronicowaniem (zob. src/app/logs/page.tsx). Porównanie z bieżącym `q`
+  // w URL-u zapobiega zbędnemu przekierowaniu zaraz po zamontowaniu.
+  useEffect(() => {
+    const currentQuery = searchParams.get('q') ?? ''
+    if (query === currentQuery) return
+
+    const timeout = setTimeout(() => {
+      const params = new URLSearchParams(searchParams)
+      if (query) {
+        params.set('q', query)
+      } else {
+        params.delete('q')
+      }
+      params.delete('page')
+      router.push(`${pathname}?${params.toString()}`)
+    }, 400)
+
+    return () => clearTimeout(timeout)
+  }, [query, searchParams, pathname, router])
 
   // Odświeżanie w tle co 60 s (z uwzględnieniem obecnych filtrów w URL) -
   // router.refresh() tylko ponownie pobiera dane z serwera, nie generuje
@@ -78,13 +109,6 @@ export function EventsTable({
 
     return () => clearInterval(interval)
   }, [autoRefresh, router])
-
-  const normalizedQuery = query.trim().toLowerCase()
-  const filteredEvents = normalizedQuery
-    ? events.filter((event) =>
-        event.message.toLowerCase().includes(normalizedQuery)
-      )
-    : events
 
   return (
     <Card>
@@ -139,7 +163,7 @@ export function EventsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredEvents.length === 0 && (
+            {events.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={showPersonalData ? 7 : 5}
@@ -149,7 +173,7 @@ export function EventsTable({
                 </TableCell>
               </TableRow>
             )}
-            {filteredEvents.map((event) => (
+            {events.map((event) => (
               <TableRow key={event.id}>
                 <TableCell className="whitespace-nowrap">
                   {dateFormatter.format(event.createdAt)}
@@ -193,6 +217,16 @@ export function EventsTable({
         {totalPages > 1 && (
           <div className="mt-4 flex items-center justify-center gap-4 text-sm">
             <Link
+              href={firstHref}
+              aria-disabled={page <= 1}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'sm' }),
+                page <= 1 && 'pointer-events-none opacity-50'
+              )}
+            >
+              Pierwsza
+            </Link>
+            <Link
               href={prevHref}
               aria-disabled={page <= 1}
               className={cn(
@@ -214,6 +248,16 @@ export function EventsTable({
               )}
             >
               Następna
+            </Link>
+            <Link
+              href={lastHref}
+              aria-disabled={page >= totalPages}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'sm' }),
+                page >= totalPages && 'pointer-events-none opacity-50'
+              )}
+            >
+              Ostatnia
             </Link>
           </div>
         )}

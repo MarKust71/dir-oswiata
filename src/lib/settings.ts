@@ -139,6 +139,27 @@ export function getEventLogRetentionDays() {
   )
 }
 
+// Liczba wpisów dziennika zdarzeń wyświetlanych na jednej stronie - zob.
+// src/app/logs/page.tsx.
+export const EVENT_LOG_PAGE_SIZE_KEY = 'event_log_page_size'
+
+const DEFAULT_EVENT_LOG_PAGE_SIZE = 50
+
+export function getEventLogPageSize() {
+  return getSettingPositiveInt(
+    EVENT_LOG_PAGE_SIZE_KEY,
+    DEFAULT_EVENT_LOG_PAGE_SIZE
+  )
+}
+
+export async function setEventLogPageSize(size: number) {
+  await prisma.settings.upsert({
+    where: { key: EVENT_LOG_PAGE_SIZE_KEY },
+    create: { key: EVENT_LOG_PAGE_SIZE_KEY, value: String(size) },
+    update: { value: String(size) },
+  })
+}
+
 export async function setEventLogRetentionDays(days: number) {
   await prisma.settings.upsert({
     where: { key: EVENT_LOG_RETENTION_DAYS_KEY },

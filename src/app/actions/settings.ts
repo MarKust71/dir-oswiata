@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireRole } from '@/lib/dal'
 import {
   setAwsSendLimits,
+  setEventLogPageSize,
   setEventLogRetentionDays,
   setInactivityTimeoutSeconds,
   setInactivityTimeoutStudentsOnly,
@@ -318,6 +319,40 @@ export async function updateEventLogRetentionAction(
     revalidatePath('/logs')
 
     return { message: 'Zapisano okres przechowywania dziennika zdarzeń.' }
+  } catch (error) {
+    if (
+      isDatabaseConnectionError(error) ||
+      (error instanceof Error && error.message === DB_CONNECTION_ERROR_MESSAGE)
+    ) {
+      return { error: DB_CONNECTION_ERROR_MESSAGE }
+    }
+    throw error
+  }
+}
+
+export async function updateEventLogPageSizeAction(
+  _state: SettingsActionState,
+  formData: FormData
+): Promise<SettingsActionState> {
+  try {
+    const actor = await requireRole([Role.ADMIN])
+
+    const pageSize = parsePositiveInt(formData.get('pageSize'))
+
+    if (pageSize === null) {
+      return { error: 'Podaj dodatnią liczbę całkowitą rekordów.' }
+    }
+
+    await setEventLogPageSize(pageSize)
+    await logSettingsChange(
+      actor,
+      `Zmieniono liczbę rekordów na stronie dziennika zdarzeń (${actor.email}).`,
+      { setting: 'event_log_page_size', pageSize }
+    )
+    revalidatePath('/settings')
+    revalidatePath('/logs')
+
+    return { message: 'Zapisano liczbę rekordów na stronie dziennika zdarzeń.' }
   } catch (error) {
     if (
       isDatabaseConnectionError(error) ||

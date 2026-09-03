@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/dal'
 import {
   getAwsDailySendLimit,
   getAwsMaxSendRatePerSecond,
+  getEventLogPageSize,
   getEventLogRetentionDays,
   getInactivityTimeoutSeconds,
   getInactivityTimeoutStudentsOnly,
@@ -38,6 +39,7 @@ import { BackupForm } from './backup-form'
 import { MaintenanceModeForm } from './maintenance-mode-form'
 import { SkipEmailVerificationForm } from './skip-email-verification-form'
 import { EventLogRetentionForm } from './event-log-retention-form'
+import { EventLogPageSizeForm } from './event-log-page-size-form'
 import { AwsSendLimitsForm } from './aws-send-limits-form'
 
 export default async function SettingsPage() {
@@ -54,6 +56,7 @@ export default async function SettingsPage() {
     maintenanceModeEnabled,
     skipEmailVerificationEnabled,
     eventLogRetentionDays,
+    eventLogPageSize,
     awsDailySendLimit,
     awsMaxSendRatePerSecond,
   ] = await Promise.all([
@@ -66,6 +69,7 @@ export default async function SettingsPage() {
     getMaintenanceMode(),
     getSkipEmailVerification(),
     getEventLogRetentionDays(),
+    getEventLogPageSize(),
     getAwsDailySendLimit(),
     getAwsMaxSendRatePerSecond(),
   ])
@@ -275,6 +279,10 @@ export default async function SettingsPage() {
             <EventLogRetentionForm
               initialDays={String(eventLogRetentionDays)}
             />
+
+            <Separator />
+
+            <EventLogPageSizeForm initialPageSize={String(eventLogPageSize)} />
           </CardContent>
         </Card>
 
