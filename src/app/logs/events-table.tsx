@@ -6,7 +6,7 @@ import Link from 'next/link'
 
 import { eventTypeLabels } from '@/lib/labels'
 import { cn } from '@/lib/utils'
-import { EventType } from '@/generated/prisma/enums'
+import { EventType, Role } from '@/generated/prisma/enums'
 import {
   Card,
   CardContent,
@@ -50,13 +50,16 @@ export function EventsTable({
   totalPages,
   prevHref,
   nextHref,
+  viewerRole,
 }: {
   events: EventRow[]
   page: number
   totalPages: number
   prevHref: string
   nextHref: string
+  viewerRole: Role
 }) {
+  const showPersonalData = viewerRole === Role.ADMIN
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [autoRefresh, setAutoRefresh] = useState(false)
@@ -88,8 +91,10 @@ export function EventsTable({
       <CardHeader>
         <CardTitle className="text-base">Zdarzenia</CardTitle>
         <CardDescription>
-          Najnowsze u góry. Adres IP i przeglądarka to dane osobowe - widoczne
-          tylko dla administratorów.
+          Najnowsze u góry.
+          {showPersonalData
+            ? ' Adres IP i przeglądarka to dane osobowe - widoczne tylko dla administratorów.'
+            : ' Adres IP i przeglądarka to dane osobowe - widoczne tylko dla administratorów, dlatego nie są tu pokazywane.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -125,15 +130,19 @@ export function EventsTable({
               <TableHead>Wiadomość</TableHead>
               <TableHead>Aktor</TableHead>
               <TableHead>Cel</TableHead>
-              <TableHead>IP</TableHead>
-              <TableHead>Przeglądarka</TableHead>
+              {showPersonalData && (
+                <>
+                  <TableHead>IP</TableHead>
+                  <TableHead>Przeglądarka</TableHead>
+                </>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredEvents.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={showPersonalData ? 7 : 5}
                   className="text-center text-muted-foreground"
                 >
                   Brak zdarzeń.
@@ -163,15 +172,19 @@ export function EventsTable({
                 >
                   {event.targetEmail ?? '—'}
                 </TableCell>
-                <TableCell className="font-mono text-xs whitespace-nowrap">
-                  {event.ip ?? '—'}
-                </TableCell>
-                <TableCell
-                  className="max-w-52 truncate text-xs"
-                  title={event.userAgent ?? undefined}
-                >
-                  {event.userAgent ?? '—'}
-                </TableCell>
+                {showPersonalData && (
+                  <>
+                    <TableCell className="font-mono text-xs whitespace-nowrap">
+                      {event.ip ?? '—'}
+                    </TableCell>
+                    <TableCell
+                      className="max-w-52 truncate text-xs"
+                      title={event.userAgent ?? undefined}
+                    >
+                      {event.userAgent ?? '—'}
+                    </TableCell>
+                  </>
+                )}
               </TableRow>
             ))}
           </TableBody>

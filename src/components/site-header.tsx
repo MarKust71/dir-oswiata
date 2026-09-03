@@ -27,6 +27,7 @@ export async function SiteHeader() {
               { href: '/dashboard', label: 'Użytkownicy' },
               { href: '/results', label: 'Wyniki' },
               { href: '/statistics', label: 'Statystyki' },
+              { href: '/logs', label: 'Log' },
             ]
           : []),
         ...(user.role === Role.ADMIN

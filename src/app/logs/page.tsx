@@ -21,7 +21,7 @@ export default async function EventsPage({
 }: {
   searchParams: Promise<{ type?: string; page?: string }>
 }) {
-  await requireRole([Role.ADMIN])
+  const user = await requireRole([Role.ADMIN, Role.USER])
 
   const params = await searchParams
   const type = params.type && isEventType(params.type) ? params.type : undefined
@@ -66,15 +66,18 @@ export default async function EventsPage({
           <p className="text-sm text-muted-foreground">
             Trwały zapis zdarzeń aplikacji - niezależny od dostarczalności
             e-maili i od ulotnych logów serwera. Wpisy starsze niż{' '}
-            {retentionDays} dni są automatycznie usuwane (zmień w Ustawieniach).
+            {retentionDays} dni są automatycznie usuwane
+            {user.role === Role.ADMIN ? ' (zmień w Ustawieniach)' : ''}.
           </p>
         </div>
-        <Link
-          href="/settings"
-          className={buttonVariants({ variant: 'outline' })}
-        >
-          Wróć do ustawień
-        </Link>
+        {user.role === Role.ADMIN && (
+          <Link
+            href="/settings"
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            Wróć do ustawień
+          </Link>
+        )}
       </div>
 
       <EventTypeFilter initialType={type} />
@@ -85,6 +88,7 @@ export default async function EventsPage({
         totalPages={totalPages}
         prevHref={pageParam(page - 1)}
         nextHref={pageParam(page + 1)}
+        viewerRole={user.role}
       />
     </div>
   )

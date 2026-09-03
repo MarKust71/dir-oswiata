@@ -253,7 +253,7 @@ export default async function SettingsPage() {
           </CardHeader>
           <CardContent className="flex flex-1 flex-col gap-4">
             <Link
-              href="/settings/events"
+              href="/logs"
               className={buttonVariants({ variant: 'outline' })}
             >
               Zobacz dziennik zdarzeń

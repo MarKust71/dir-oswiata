@@ -41,7 +41,7 @@ export async function logEvent(params: {
 
 /**
  * Usuwa wpisy dziennika starsze niż `retentionDays` - wywoływane przy
- * wizycie na stronie dziennika (src/app/settings/events/page.tsx), a nie przy
+ * wizycie na stronie dziennika (src/app/logs/page.tsx), a nie przy
  * każdym zapisie zdarzenia, żeby nie obciążać każdej pojedynczej akcji.
  */
 export async function cleanupExpiredEvents(retentionDays: number) {

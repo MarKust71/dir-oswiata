@@ -102,7 +102,7 @@ export async function setInactivityTimeoutSeconds(seconds: number) {
 }
 
 // Liczba dni, po których wpisy w dzienniku zdarzeń (EventLog) są czyszczone -
-// zob. src/app/settings/events/page.tsx. IP i user-agent to dane osobowe,
+// zob. src/app/logs/page.tsx. IP i user-agent to dane osobowe,
 // więc dziennik nie powinien rosnąć bez końca.
 export const EVENT_LOG_RETENTION_DAYS_KEY = 'event_log_retention_days'
 
