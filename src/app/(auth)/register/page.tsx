@@ -8,11 +8,14 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { getMaintenanceMode } from '@/lib/settings'
+import { isResultsWindowLockActive } from '@/lib/results-window-lock'
 
 import { RegisterForm } from './register-form'
 
 export default async function RegisterPage() {
   const maintenanceMode = await getMaintenanceMode()
+  const registrationLocked =
+    !maintenanceMode && (await isResultsWindowLockActive())
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-12">
@@ -35,6 +38,20 @@ export default async function RegisterPage() {
                 </p>
                 <p className="text-muted-foreground">
                   Zajrzyj ponownie za kilka minut.
+                </p>
+              </div>
+              <Link
+                href="/"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Wróć na stronę główną
+              </Link>
+            </div>
+          ) : registrationLocked ? (
+            <div className="flex flex-col gap-3 text-center">
+              <div className="rounded-md bg-muted p-3 text-sm">
+                <p className="font-medium">
+                  Możliwość założenia konta została wyłączona.
                 </p>
               </div>
               <Link

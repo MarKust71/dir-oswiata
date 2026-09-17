@@ -3,6 +3,7 @@ import Link from 'next/link'
 import packageJson from '../../package.json'
 import { getCurrentUser } from '@/lib/dal'
 import { getMaintenanceMode } from '@/lib/settings'
+import { isResultsWindowLockActive } from '@/lib/results-window-lock'
 import { logoutAction } from '@/app/actions/auth'
 import { buttonVariants } from '@/components/ui/button'
 import { roleLabels } from '@/lib/labels'
@@ -19,6 +20,8 @@ import { SiteHeaderNav } from './site-header-nav'
 export async function SiteHeader() {
   const user = await getCurrentUser()
   const maintenanceMode = user ? false : await getMaintenanceMode()
+  const hideRegisterLink =
+    maintenanceMode || (!user && (await isResultsWindowLockActive()))
 
   const links = user
     ? [
@@ -66,7 +69,7 @@ export async function SiteHeader() {
             >
               Zaloguj
             </Link>
-            {!maintenanceMode && (
+            {!hideRegisterLink && (
               <Link href="/register" className={buttonVariants({ size: 'sm' })}>
                 Zarejestruj
               </Link>

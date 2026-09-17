@@ -14,6 +14,7 @@ import {
   setNotificationEmails,
   setResultsLimits,
   setResultsVisibilityWindow,
+  setResultsWindowLockEnabled,
   setSkipEmailVerification,
 } from '@/lib/settings'
 import { NotificationEmailSchema } from '@/lib/validation'
@@ -123,6 +124,36 @@ export async function updateResultsWindowAction(
     revalidatePath('/panel')
 
     return { message: 'Zapisano okres udostępnienia wyników.' }
+  } catch (error) {
+    if (
+      isDatabaseConnectionError(error) ||
+      (error instanceof Error && error.message === DB_CONNECTION_ERROR_MESSAGE)
+    ) {
+      return { error: DB_CONNECTION_ERROR_MESSAGE }
+    }
+    throw error
+  }
+}
+
+export async function updateResultsWindowLockAction(
+  enabled: boolean
+): Promise<{ error?: string }> {
+  try {
+    const actor = await requireRole([Role.ADMIN])
+
+    await setResultsWindowLockEnabled(enabled)
+    await logSettingsChange(
+      actor,
+      `Przełącznik wygaszania rejestracji i wyników po terminie ustawiony na ${enabled} przez ${actor.email}.`,
+      { setting: 'results_window_lock_enabled', enabled }
+    )
+    revalidatePath('/settings')
+    revalidatePath('/')
+    revalidatePath('/register')
+    revalidatePath('/login')
+    revalidatePath('/panel')
+
+    return {}
   } catch (error) {
     if (
       isDatabaseConnectionError(error) ||

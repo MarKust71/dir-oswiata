@@ -45,6 +45,30 @@ export async function setResultsVisibilityWindow(from: Date, until: Date) {
   ])
 }
 
+// Włącza automatyczne wygaszanie rejestracji nowych kont oraz (dla roli
+// STUDENT) dostępu do wyników egzaminu po terminie results_visible_until -
+// zob. src/lib/results-window-lock.ts. Logowanie samo w sobie nigdy nie jest
+// przez to blokowane. Domyślnie włączone (brak wiersza w bazie = true), żeby
+// zachować dotychczasowe zachowanie: po "until" wyniki i tak przestawały być
+// dostępne w panelu, tylko bez wyraźnego komunikatu i bez blokady rejestracji.
+export const RESULTS_WINDOW_LOCK_ENABLED_KEY = 'results_window_lock_enabled'
+
+export async function getResultsWindowLockEnabled(): Promise<boolean> {
+  const row = await prisma.settings.findUnique({
+    where: { key: RESULTS_WINDOW_LOCK_ENABLED_KEY },
+  })
+
+  return row ? row.value === 'true' : true
+}
+
+export async function setResultsWindowLockEnabled(enabled: boolean) {
+  await prisma.settings.upsert({
+    where: { key: RESULTS_WINDOW_LOCK_ENABLED_KEY },
+    create: { key: RESULTS_WINDOW_LOCK_ENABLED_KEY, value: String(enabled) },
+    update: { value: String(enabled) },
+  })
+}
+
 // Limity dotyczące weryfikacji numeru wniosku i wyświetlania wyników przez
 // studenta - zob. src/app/actions/verify-application-number.ts.
 export const MAX_APPLICATION_NUMBER_ATTEMPTS_KEY =

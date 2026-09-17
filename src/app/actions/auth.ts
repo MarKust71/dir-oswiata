@@ -27,6 +27,7 @@ import {
   findAccountAlreadyLinkedToMatchingResult,
   tryLinkUserToResult,
 } from '@/lib/results-matching'
+import { isResultsWindowLockActive } from '@/lib/results-window-lock'
 import {
   getMaintenanceMode,
   getNotificationEmails,
@@ -95,6 +96,10 @@ export async function registerAction(
       message:
         'Przerwa konserwacyjna. Rejestracja nowych kont jest chwilowo niedostępna.',
     }
+  }
+
+  if (await isResultsWindowLockActive()) {
+    return { message: 'Możliwość założenia konta została wyłączona.' }
   }
 
   const { ip, userAgent } = await getClientRequestInfo()

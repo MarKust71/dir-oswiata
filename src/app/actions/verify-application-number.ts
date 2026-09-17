@@ -13,6 +13,7 @@ import {
   sendResultsViewLimitReachedAdminNotification,
   sendResultsViewLimitReachedUserEmail,
 } from '@/lib/mailer'
+import { isResultsWindowLockActive } from '@/lib/results-window-lock'
 import { getClientRequestInfo } from '@/lib/request-info'
 import { logEvent } from '@/lib/event-log'
 import {
@@ -52,6 +53,13 @@ export async function verifyApplicationNumberAction(
 ): Promise<VerifyApplicationNumberState> {
   try {
     const actor = await requireRole([Role.STUDENT])
+
+    if (await isResultsWindowLockActive()) {
+      return {
+        status: 'error',
+        message: 'Możliwość sprawdzenia wyniku egzaminu została wyłączona.',
+      }
+    }
 
     const [maxAttempts, maxViews] = await Promise.all([
       getMaxApplicationNumberAttempts(),
