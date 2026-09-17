@@ -1,5 +1,9 @@
 import { requireUser } from '@/lib/dal'
-import { getResultsVisibleFrom, getResultsVisibleUntil } from '@/lib/settings'
+import {
+  getResultsVisibleFrom,
+  getResultsVisibleUntil,
+  getResultsWindowLockEnabled,
+} from '@/lib/settings'
 import { notifyMissingResultIfNeeded } from '@/lib/missing-result-notification'
 import { tryLinkUserToResult } from '@/lib/results-matching'
 import { Role } from '@/generated/prisma/enums'
@@ -53,20 +57,32 @@ export default async function PanelPage() {
     })
   }
 
-  const [resultsVisibleFrom, resultsVisibleUntil] =
+  const [resultsVisibleFrom, resultsVisibleUntil, resultsWindowLockEnabled] =
     user.role === Role.STUDENT
-      ? await Promise.all([getResultsVisibleFrom(), getResultsVisibleUntil()])
-      : [null, null]
+      ? await Promise.all([
+          getResultsVisibleFrom(),
+          getResultsVisibleUntil(),
+          getResultsWindowLockEnabled(),
+        ])
+      : [null, null, false]
 
   const now = new Date()
   const isBeforeResultsWindow = Boolean(
     resultsVisibleFrom && now < resultsVisibleFrom
   )
+  // Gdy przełącznik "Wygaszanie po dacie końcowej" (results_window_lock_enabled,
+  // Ustawienia) jest wyłączony, upływ resultsVisibleUntil nie zamyka już okna -
+  // wyniki pozostają dostępne bezterminowo po dacie początkowej. Gdy jest
+  // włączony, po dacie końcowej okno się zamyka i pokazujemy osobny komunikat
+  // (zob. resultsWindowLockActive poniżej) zamiast cichego braku dostępu.
+  const resultsWindowLockActive = Boolean(
+    resultsWindowLockEnabled && resultsVisibleUntil && now > resultsVisibleUntil
+  )
   const isWithinResultsWindow = Boolean(
     resultsVisibleFrom &&
     resultsVisibleUntil &&
     now >= resultsVisibleFrom &&
-    now <= resultsVisibleUntil
+    !resultsWindowLockActive
   )
   const needsApplicationNumberVerification = isWithinResultsWindow && hasResult
   const resultsNotYetAvailable = isWithinResultsWindow && !hasResult
@@ -124,6 +140,11 @@ export default async function PanelPage() {
               digits={user.peselDigits}
             />
           </div>
+          {resultsWindowLockActive && (
+            <p className="font-medium text-destructive">
+              Możliwość sprawdzenia wyniku egzaminu została wyłączona.
+            </p>
+          )}
           {isBeforeResultsWindow && resultsVisibleFrom && (
             <>
               <p className="rounded-md bg-muted p-3 text-muted-foreground">

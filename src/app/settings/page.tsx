@@ -15,6 +15,7 @@ import {
   getNotificationEmails,
   getResultsVisibleFrom,
   getResultsVisibleUntil,
+  getResultsWindowLockEnabled,
   getSkipEmailVerification,
 } from '@/lib/settings'
 import { toWarsawLocalDateTimeInputValue } from '@/lib/warsaw-time'
@@ -32,6 +33,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { NotificationEmailsForm } from './notification-emails-form'
 import { ImportResultsForm } from './import-results-form'
 import { ResultsWindowForm } from './results-window-form'
+import { ResultsWindowLockForm } from './results-window-lock-form'
 import { ResultsLimitsForm } from './results-limits-form'
 import { RelinkResultsForm } from './relink-results-form'
 import { InactivityTimeoutForm } from './inactivity-timeout-form'
@@ -62,6 +64,7 @@ export default async function SettingsPage() {
     awsDailySendLimit,
     awsMaxSendRatePerSecond,
     mailerSendMonthlySendLimit,
+    resultsWindowLockEnabled,
   ] = await Promise.all([
     getResultsVisibleFrom(),
     getResultsVisibleUntil(),
@@ -76,6 +79,7 @@ export default async function SettingsPage() {
     getAwsDailySendLimit(),
     getAwsMaxSendRatePerSecond(),
     getMailerSendMonthlySendLimit(),
+    getResultsWindowLockEnabled(),
   ])
 
   return (
@@ -114,7 +118,7 @@ export default async function SettingsPage() {
               początkowej. Wartości podawane są w czasie lokalnym Warszawy.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col">
+          <CardContent className="flex flex-1 flex-col gap-4">
             <ResultsWindowForm
               initialFrom={
                 resultsVisibleFrom
@@ -127,6 +131,25 @@ export default async function SettingsPage() {
                   : ''
               }
             />
+
+            <Separator />
+
+            <div className="flex flex-col gap-1.5">
+              <p className="text-sm font-medium">
+                Wygaszanie po dacie końcowej
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Po włączeniu, upływ daty końcowej automatycznie wyłącza
+                rejestrację nowych kont (przyciski/skróty prowadzące do
+                rejestracji są ukrywane, a strona /register pokazuje komunikat)
+                oraz dostęp do wyników egzaminu dla roli Student (logowanie samo
+                w sobie zawsze działa). Po wyłączeniu rejestracja i dostęp do
+                wyników są możliwe zawsze, niezależnie od daty końcowej.
+              </p>
+              <ResultsWindowLockForm
+                initialEnabled={resultsWindowLockEnabled}
+              />
+            </div>
           </CardContent>
         </Card>
 

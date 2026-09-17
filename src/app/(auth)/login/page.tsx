@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { getMaintenanceMode } from '@/lib/settings'
+import { isResultsWindowLockActive } from '@/lib/results-window-lock'
 
 import { LoginForm } from './login-form'
 
@@ -16,6 +17,8 @@ export default async function LoginPage(props: PageProps<'/login'>) {
     : searchParams.reason
 
   const maintenanceMode = await getMaintenanceMode()
+  const hideRegisterLink =
+    maintenanceMode || (await isResultsWindowLockActive())
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-12">
@@ -57,7 +60,7 @@ export default async function LoginPage(props: PageProps<'/login'>) {
               zablokowane. Jeśli uważasz, że to pomyłka, skontaktuj się z DIR.
             </p>
           )}
-          <LoginForm hideRegisterLink={maintenanceMode} />
+          <LoginForm hideRegisterLink={hideRegisterLink} />
         </CardContent>
       </Card>
     </div>
